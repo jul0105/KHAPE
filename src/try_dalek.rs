@@ -2,6 +2,42 @@ use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::montgomery::MontgomeryPoint;
 use curve25519_dalek::constants::{ED25519_BASEPOINT_TABLE, X25519_BASEPOINT};
 
+pub fn try_triple_dh() {
+    let a: Scalar = compute_private_key([1u8; 32]);
+    let b: Scalar = compute_private_key([2u8; 32]);
+    let A: MontgomeryPoint = compute_public_key(a);
+    let B: MontgomeryPoint = compute_public_key(b);
+
+
+    let x: Scalar = compute_private_key([3u8; 32]);
+    let y: Scalar = compute_private_key([4u8; 32]);
+    let X: MontgomeryPoint = compute_public_key(x);
+    let Y: MontgomeryPoint = compute_public_key(y);
+
+    // B^x || Y^a || Y^x
+    let o_client_1 = compute_shared_key(x.to_bytes(), B.to_bytes());
+    let o_client_2 = compute_shared_key(a.to_bytes(), Y.to_bytes());
+    let o_client_3 = compute_shared_key(x.to_bytes(), Y.to_bytes());
+    let o_client = [o_client_1, o_client_2, o_client_3].concat();
+
+    // X^b || A^y || X^y
+    let o_server_1 = compute_shared_key(b.to_bytes(), X.to_bytes());
+    let o_server_2 = compute_shared_key(y.to_bytes(), A.to_bytes());
+    let o_server_3 = compute_shared_key(y.to_bytes(), X.to_bytes());
+    let o_server = [o_server_1, o_server_2, o_server_3].concat();
+
+    assert_eq!(o_client_1, o_server_1);
+    assert_eq!(o_client_2, o_server_2);
+    assert_eq!(o_client_3, o_server_3);
+    assert_eq!(o_client_1.len(), 32);
+    assert_eq!(o_client_2.len(), 32);
+    assert_eq!(o_client_3.len(), 32);
+
+    assert_eq!(o_client, o_server);
+    assert_eq!(o_client.len(), 32*3);
+
+}
+
 pub fn try_dalek_ecc() {
     let alice_private: Scalar = clamp_scalar([1u8; 32]);
     let bob_private: Scalar = clamp_scalar([2u8; 32]);

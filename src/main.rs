@@ -7,5 +7,6 @@ fn main() {
 
     try_dalek_ecc();
     try_dalek_ecc2();
+    try_triple_dh();
     println!("Finished");
 }
