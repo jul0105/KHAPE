@@ -7,12 +7,4 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-#curve25519-dalek = "3.2.0"
-snarkvm-curves = "0.7.9"
-snarkvm-wasm = "0.7.9"
-
-rand_xorshift = "0.3.0" #dev
-rand = "0.8.0" #dev
-
-snarkvm-fields = "0.7.9"
-snarkvm-utilities = "0.7.9"
+curve25519-dalek = "3.2.0"
