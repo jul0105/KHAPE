@@ -1,17 +1,18 @@
-use voprf::{NonVerifiableServer, NonVerifiableClient, NonVerifiableClientBlindResult, BlindedElement};
-use rand::{rngs::OsRng, RngCore};
-use crate::oprf;
 use std::borrow::BorrowMut;
-use crate::group;
+
+use rand::{RngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize};
+use voprf::{BlindedElement, NonVerifiableClient, NonVerifiableClientBlindResult, NonVerifiableServer};
+
+use crate::encryption::{EncryptedEnvelope, Envelope};
+use crate::group;
+use crate::oprf;
 
 type Group = curve25519_dalek::ristretto::RistrettoPoint;
 type Hash = sha2::Sha512;
 
 pub type CurvePoint = curve25519_dalek::montgomery::MontgomeryPoint;
 pub type CurveScalar = curve25519_dalek::scalar::Scalar;
-
-type OprfValue = String;
 
 
 // Serialize (send)
@@ -33,18 +34,6 @@ pub struct RegisterResponse {
 pub struct RegisterFinish {
     pub encrypted_envelope: EncryptedEnvelope,
     pub A: CurvePoint
-}
-
-pub struct Envelope {
-    pub a: CurveScalar,
-    pub B: CurvePoint,
-}
-
-// Serialize (sends, store)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct EncryptedEnvelope {
-    pub a: [u8; 32],
-    pub B: [u8; 32],
 }
 
 // Serialize (store)

@@ -1,5 +1,19 @@
-use crate::khape::{Envelope, EncryptedEnvelope, CurveScalar, CurvePoint};
 use curve25519_dalek::montgomery::MontgomeryPoint;
+use serde::{Deserialize, Serialize};
+
+use crate::khape::{CurvePoint, CurveScalar};
+
+pub struct Envelope {
+    pub a: CurveScalar,
+    pub B: CurvePoint,
+}
+
+// Serialize (sends, store)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct EncryptedEnvelope {
+    pub a: [u8; 32],
+    pub B: [u8; 32],
+}
 
 impl Envelope {
     pub fn encrypt(&self) -> EncryptedEnvelope {
