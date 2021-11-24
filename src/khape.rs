@@ -3,6 +3,7 @@ use rand::{rngs::OsRng, RngCore};
 use crate::oprf;
 use std::borrow::BorrowMut;
 use crate::group;
+use serde::{Deserialize, Serialize};
 
 type Group = curve25519_dalek::ristretto::RistrettoPoint;
 type Hash = sha2::Sha512;
@@ -13,19 +14,25 @@ pub type CurveScalar = curve25519_dalek::scalar::Scalar;
 type OprfValue = String;
 
 
+// Serialize (send)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterRequest {
     pub uid: String,
-    pub oprf_client_blind_result: Vec<u8>, // oprf init
+    pub oprf_client_blind_result: Vec<u8>,
 }
 
+// Serialize (send)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterResponse {
-    pub B: CurvePoint, // curve point
-    pub oprf_server_evalute_result: Vec<u8>, // oprf init
+    pub B: CurvePoint,
+    pub oprf_server_evalute_result: Vec<u8>,
 }
 
+// Serialize (send)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterFinish {
-    pub encrypted_envelope: EncryptedEnvelope, // Encrypted envelope
-    pub A: CurvePoint // curve point
+    pub encrypted_envelope: EncryptedEnvelope,
+    pub A: CurvePoint
 }
 
 pub struct Envelope {
@@ -33,11 +40,15 @@ pub struct Envelope {
     pub B: CurvePoint,
 }
 
+// Serialize (sends, store)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct EncryptedEnvelope {
     pub a: [u8; 32],
     pub B: [u8; 32],
 }
 
+// Serialize (store)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct FileEntry {
     pub e: EncryptedEnvelope,
     pub b: CurveScalar,
@@ -122,8 +133,17 @@ mod tests {
         let uid = "1234";
         let password = b"test";
         let (register_request, oprf_client_state) = client_register_start(uid, password);
+
+        println!("Sending register request : {:?}", register_request);
+
         let (register_response, b, secret_salt) = server_register_start(register_request);
+
+        println!("Sending register response : {:?}", register_response);
+
         let register_finish = client_register_finish(register_response, oprf_client_state);
+
+        println!("Sending register finish : {:?}", register_finish);
+
         let file_entry = server_register_finish(register_finish, b, secret_salt);
     }
 }
