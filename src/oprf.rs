@@ -26,14 +26,14 @@ pub fn server_evaluate(client_blind_result: Vec<u8>, secret_salt: [u8; 32]) -> V
         .expect("Unable to construct server");
 
     server.evaluate(
-        BlindedElement::<Group, Hash>::deserialize(&client_blind_result).unwrap(),
+        BlindedElement::<Group, Hash>::deserialize(&client_blind_result).unwrap(), // TODO unwrap
         None,
     ).expect("Unable to perform server evaluate").message.serialize()
 }
 
 pub fn client_finish(client_state: NonVerifiableClient<Group, Hash>, server_evaluate_result: Vec<u8>) -> Vec<u8> {
     client_state.finalize(
-        EvaluationElement::<Group, Hash>::deserialize(&server_evaluate_result).unwrap(),
+        EvaluationElement::<Group, Hash>::deserialize(&server_evaluate_result).unwrap(), // TODO unwrap
         None,
     ).expect("Unable to perform client finalization").to_vec()
 }

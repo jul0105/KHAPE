@@ -7,6 +7,7 @@ mod khape;
 mod oprf;
 mod group;
 mod tripledh;
+mod encryption;
 
 fn main() {
     println!("Start 3DH");

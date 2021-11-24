@@ -7,12 +7,10 @@ use crate::group;
 type Group = curve25519_dalek::ristretto::RistrettoPoint;
 type Hash = sha2::Sha512;
 
-type CurvePoint = curve25519_dalek::montgomery::MontgomeryPoint;
-type CurveScalar = curve25519_dalek::scalar::Scalar;
+pub type CurvePoint = curve25519_dalek::montgomery::MontgomeryPoint;
+pub type CurveScalar = curve25519_dalek::scalar::Scalar;
 
 type OprfValue = String;
-type FileEntry = String;
-type Ciphertext = String;
 
 
 pub struct RegisterRequest {
@@ -26,13 +24,25 @@ pub struct RegisterResponse {
 }
 
 pub struct RegisterFinish {
-    pub encrypted_envelope: Ciphertext, // Encrypted envelope
+    pub encrypted_envelope: EncryptedEnvelope, // Encrypted envelope
     pub A: CurvePoint // curve point
 }
 
 pub struct Envelope {
     pub a: CurveScalar,
     pub B: CurvePoint,
+}
+
+pub struct EncryptedEnvelope {
+    pub a: [u8; 32],
+    pub B: [u8; 32],
+}
+
+pub struct FileEntry {
+    pub e: EncryptedEnvelope,
+    pub b: CurveScalar,
+    pub A: CurvePoint,
+    pub secret_salt: [u8; 32],
 }
 
 /// Return RegisterRequest and oprf_client_state
@@ -69,6 +79,7 @@ pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResp
 
 // Response B and h2 (RegisterResponse)
 
+/// Return RegisterFinish (ciphertext, A)
 pub fn client_register_finish(register_response: RegisterResponse, oprf_client_state: NonVerifiableClient<Group, Hash>) -> RegisterFinish {
     // Generate asymmetric key
     let (a, A) = group::generate_keys();
@@ -79,21 +90,40 @@ pub fn client_register_finish(register_response: RegisterResponse, oprf_client_s
     // Encrypt (a, B) with rw
     let envelope = Envelope {
         a,
-        B: register_response.B,
+        B: register_response.B
     };
-
-    let ciphertext = envelope;
+    let encrypted_envelope = envelope.encrypt();
 
     // Return ciphertext
     RegisterFinish {
-        encrypted_envelope: ciphertext,
+        encrypted_envelope,
         A,
     }
 }
 
 // Sends e and A (RegisterFinish)
 
-pub fn server_register_finish(register_finish: RegisterFinish, b: CurveScalar, salt: [u8; 32]) -> FileEntry {
-    // store (e, b, A, salt)
-    unimplemented!()
+pub fn server_register_finish(register_finish: RegisterFinish, b: CurveScalar, secret_salt: [u8; 32]) -> FileEntry {
+    // Store (e, b, A, salt)
+    FileEntry {
+        e: register_finish.encrypted_envelope,
+        b,
+        A: register_finish.A,
+        secret_salt,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn register() {
+        let uid = "1234";
+        let password = b"test";
+        let (register_request, oprf_client_state) = client_register_start(uid, password);
+        let (register_response, b, secret_salt) = server_register_start(register_request);
+        let register_finish = client_register_finish(register_response, oprf_client_state);
+        let file_entry = server_register_finish(register_finish, b, secret_salt);
+    }
 }
