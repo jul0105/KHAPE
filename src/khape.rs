@@ -146,4 +146,31 @@ mod tests {
 
         let file_entry = server_register_finish(register_finish, b, secret_salt);
     }
+
+    #[test]
+    fn register_with_serialization() {
+        let uid = "1234";
+        let password = b"test";
+
+
+        let (register_request, oprf_client_state) = client_register_start(uid, password);
+
+        let register_request_serialized = serde_json::to_string(&register_request).unwrap();
+        println!("Sending register request : {:?}", register_request_serialized);
+        let register_request_deserialized: RegisterRequest = serde_json::from_str(&register_request_serialized).unwrap();
+
+        let (register_response, b, secret_salt) = server_register_start(register_request_deserialized);
+
+        let register_response_serialized = serde_json::to_string(&register_response).unwrap();
+        println!("Sending register response : {:?}", register_response_serialized);
+        let register_response_deserialized: RegisterResponse = serde_json::from_str(&register_response_serialized).unwrap();
+
+        let register_finish = client_register_finish(register_response_deserialized, oprf_client_state);
+
+        let register_finish_serialized = serde_json::to_string(&register_finish).unwrap();
+        println!("Sending register finish : {:?}", register_finish_serialized);
+        let register_finish_deserialized: RegisterFinish = serde_json::from_str(&register_finish_serialized).unwrap();
+
+        let file_entry = server_register_finish(register_finish_deserialized, b, secret_salt);
+    }
 }
