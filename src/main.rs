@@ -5,6 +5,8 @@ use crate::khape::{client_register_start, server_register_start, client_register
 mod try_dalek;
 mod khape;
 mod oprf;
+mod group;
+mod tripledh;
 
 fn main() {
     println!("Start 3DH");

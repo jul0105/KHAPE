@@ -1,6 +1,7 @@
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::montgomery::MontgomeryPoint;
 use curve25519_dalek::constants::{ED25519_BASEPOINT_TABLE, X25519_BASEPOINT};
+use rand::{thread_rng, Rng};
 
 pub fn try_triple_dh() {
     let a: Scalar = compute_private_key([1u8; 32]);
@@ -77,6 +78,15 @@ fn compute_public_key(private_key: Scalar) -> MontgomeryPoint {
 
 fn compute_shared_key(own_private_key: [u8; 32], opposing_public_key: [u8; 32]) -> [u8; 32] {
     (clamp_scalar(own_private_key) * MontgomeryPoint(opposing_public_key)).to_bytes() // From x25519-dalek library
+}
+
+fn generate_private_key() -> Scalar {
+    clamp_scalar(thread_rng().gen::<[u8; 32]>())
+}
+
+fn generate_keys() -> (Scalar, MontgomeryPoint) {
+    let private_key = generate_private_key();
+    (private_key, compute_public_key(private_key))
 }
 
 
