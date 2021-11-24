@@ -1,5 +1,10 @@
-use voprf::{NonVerifiableServer, NonVerifiableClient};
+use voprf::{NonVerifiableServer, NonVerifiableClient, NonVerifiableClientBlindResult, BlindedElement};
 use rand::{rngs::OsRng, RngCore};
+use crate::oprf;
+use std::borrow::BorrowMut;
+
+type Group = curve25519_dalek::ristretto::RistrettoPoint;
+type Hash = sha2::Sha512;
 
 type CurvePoint = String;
 type OprfValue = String;
@@ -9,44 +14,61 @@ type FileEntry = String;
 
 pub struct RegisterRequest {
     pub uid: String,
-    pub h1: OprfValue, // oprf init
+    pub oprf_client_blind_result: Vec<u8>, // oprf init
 }
 
 pub struct RegisterResponse {
     pub B: CurvePoint, // curve point
-    pub h2: OprfValue, // oprf init
+    pub oprf_server_evalute_result: Vec<u8>, // oprf init
 }
 
 pub struct RegisterFinish {
-    pub e: Envelope, // Encrypted enveloppe
+    pub e: Envelope, // Encrypted envelope
     pub A: CurvePoint // curve point
 }
 
+/// Return RegisterRequest and oprf_client_state
+pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, NonVerifiableClient<Group, Hash>) {
+    // Compute OPRF initialization
+    let (client_state, client_blind_result) = oprf::client_init(pw);
 
-pub fn client_register_start(uid: &str, pw: &str) -> RegisterRequest {
-    // compute OPRF initialization
-    // add OPRF h1 and uid to a struct
-    // return struct
-    unimplemented!()
+    // Add OPRF client blind and uid to a struct
+    (RegisterRequest {
+        uid: String::from(uid),
+        oprf_client_blind_result: client_blind_result,
+    }, client_state)
 }
 
 // Sends uid and h1 (RegisterRequest)
 
-pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, CurvePoint, OprfValue) {
-    // generate_asymetric_key
-    // generate OPRF salt
-    // compute OPRF h2
-    // return B and h2 % TODO how to store salt and b (secret) ? Pre - store b and salt in file[uid] (remove it on server_register_finish) OR use a session_file[sid] < - (b, salt)
-    unimplemented!()
+/// Return RegisterResponse (B and oprf_server_evaluate_result), b and secret_salt
+pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, CurvePoint, [u8; 32]) {
+    // Generate asymmetric key
+    let b = String::from("");
+    let B = String::from("");
+
+    // Generate OPRF salt
+    let secret_salt = oprf::generate_secret();
+
+    // Gompute OPRF server evaluate
+    let server_evaluate_result = oprf::server_evaluate(register_request.oprf_client_blind_result, secret_salt);
+
+    // Return B and h2 % TODO how to store salt and b (secret) ? Pre - store b and salt in file[uid] (remove it on server_register_finish) OR use a session_file[sid] < - (b, salt)
+    (RegisterResponse {
+        B,
+        oprf_server_evalute_result: server_evaluate_result,
+    }, b, secret_salt)
 }
 
 // Response B and h2 (RegisterResponse)
 
-pub fn client_register_finish(register_response: RegisterResponse, pw: &str) -> RegisterFinish {
-    // generate_asymetric_key
-    // compute OPRF output
-    // encrypt (a, B) with rw
-    // return ciphertext
+pub fn client_register_finish(register_response: RegisterResponse, oprf_client_state: NonVerifiableClient<Group, Hash>) -> RegisterFinish {
+    // Generate asymmetric key
+    // Compute OPRF output
+    let rw = oprf::client_finish(oprf_client_state, register_response.oprf_server_evalute_result);
+
+    // Encrypt (a, B) with rw
+    // Return ciphertext
     unimplemented!()
 }
 
