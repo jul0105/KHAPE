@@ -2,14 +2,17 @@ use voprf::{NonVerifiableServer, NonVerifiableClient, NonVerifiableClientBlindRe
 use rand::{rngs::OsRng, RngCore};
 use crate::oprf;
 use std::borrow::BorrowMut;
+use crate::group;
 
 type Group = curve25519_dalek::ristretto::RistrettoPoint;
 type Hash = sha2::Sha512;
 
-type CurvePoint = String;
+type CurvePoint = curve25519_dalek::montgomery::MontgomeryPoint;
+type CurveScalar = curve25519_dalek::scalar::Scalar;
+
 type OprfValue = String;
-type Envelope = String;
 type FileEntry = String;
+type Ciphertext = String;
 
 
 pub struct RegisterRequest {
@@ -23,8 +26,13 @@ pub struct RegisterResponse {
 }
 
 pub struct RegisterFinish {
-    pub e: Envelope, // Encrypted envelope
+    pub encrypted_envelope: Ciphertext, // Encrypted envelope
     pub A: CurvePoint // curve point
+}
+
+pub struct Envelope {
+    pub a: CurveScalar,
+    pub B: CurvePoint,
 }
 
 /// Return RegisterRequest and oprf_client_state
@@ -42,15 +50,14 @@ pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, NonVerif
 // Sends uid and h1 (RegisterRequest)
 
 /// Return RegisterResponse (B and oprf_server_evaluate_result), b and secret_salt
-pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, CurvePoint, [u8; 32]) {
+pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, CurveScalar, [u8; 32]) {
     // Generate asymmetric key
-    let b = String::from("");
-    let B = String::from("");
+    let (b, B) = group::generate_keys();
 
     // Generate OPRF salt
     let secret_salt = oprf::generate_secret();
 
-    // Gompute OPRF server evaluate
+    // Compute OPRF server evaluate
     let server_evaluate_result = oprf::server_evaluate(register_request.oprf_client_blind_result, secret_salt);
 
     // Return B and h2 % TODO how to store salt and b (secret) ? Pre - store b and salt in file[uid] (remove it on server_register_finish) OR use a session_file[sid] < - (b, salt)
@@ -64,17 +71,29 @@ pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResp
 
 pub fn client_register_finish(register_response: RegisterResponse, oprf_client_state: NonVerifiableClient<Group, Hash>) -> RegisterFinish {
     // Generate asymmetric key
+    let (a, A) = group::generate_keys();
+
     // Compute OPRF output
     let rw = oprf::client_finish(oprf_client_state, register_response.oprf_server_evalute_result);
 
     // Encrypt (a, B) with rw
+    let envelope = Envelope {
+        a,
+        B: register_response.B,
+    };
+
+    let ciphertext = envelope;
+
     // Return ciphertext
-    unimplemented!()
+    RegisterFinish {
+        encrypted_envelope: ciphertext,
+        A,
+    }
 }
 
 // Sends e and A (RegisterFinish)
 
-pub fn server_register_finish(register_finish: RegisterFinish, b: CurvePoint, salt: OprfValue) -> FileEntry {
+pub fn server_register_finish(register_finish: RegisterFinish, b: CurveScalar, salt: [u8; 32]) -> FileEntry {
     // store (e, b, A, salt)
     unimplemented!()
 }
