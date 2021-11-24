@@ -1,23 +1,24 @@
 use crate::try_dalek::*;
+use crate::oprf::*;
 use crate::khape::{client_register_start, server_register_start, client_register_finish, server_register_finish};
 
 mod try_dalek;
 mod khape;
+mod oprf;
 
 fn main() {
-    println!("Start");
-
+    println!("Start 3DH");
     try_dalek_ecc();
     try_dalek_ecc2();
     try_triple_dh();
-    println!("Finished");
+    println!("Finished 3DH");
 }
 
 
 
-fn test_khape() {
-    client_register_start();
-    server_register_start();
-    client_register_finish();
-    server_register_finish();
-}
+// fn test_khape() {
+//     client_register_start();
+//     server_register_start();
+//     client_register_finish();
+//     server_register_finish();
+// }

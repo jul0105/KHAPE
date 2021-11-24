@@ -10,3 +10,5 @@ edition = "2018"
 curve25519-dalek = "3.2.0"
 x25519-dalek = "1.2.0"
 voprf = "0.3.0"
+rand = "0.8.4"
+sha2 = "0.9.8" # à confirmer
