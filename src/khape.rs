@@ -163,3 +163,93 @@ mod tests {
         let file_entry = server_register_finish(register_finish_deserialized, b, secret_salt);
     }
 }
+
+
+
+
+//////////////////////////////////////////////
+//                 REGISTER                 //
+//////////////////////////////////////////////
+
+type VerifyTag = String;
+type PreKey = String;
+type OutputKey = String;
+type FileStorage = Vec<FileEntry>;
+
+
+pub struct EphemeralKeys {
+    private: CurveScalar,
+    public: CurvePoint,
+}
+
+/// Return AuthRequest (uid and oprf_client_blind_result)
+pub fn client_auth_start(uid: &str, pw: &[u8]) -> AuthRequest {
+    // similar to client_register_start
+    // compute OPRF initialization
+    // add OPRF h1 and uid to a struct
+    // return struct
+    unimplemented!()
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct AuthRequest {
+    pub uid: String,
+    pub oprf_client_blind_result: Vec<u8>,
+}
+
+/// Return AuthResponse (e, Y, oprf_server_evalute_result) and EphemeralKeys (server Y and y)
+pub fn server_auth_start(auth_request: AuthRequest, file: FileStorage) -> (AuthResponse, EphemeralKeys) {
+    // generate_asymetric_key
+    // retrieve (e, salt) from file
+    // compute OPRF h2 % TODO ensure that client-side attacker cannot retrieve salt (by inputing anoter user uid)
+    // return e, Y, y, h2 % TODO how to store y ? Store in file[uid] (remove it on server_auth_finish) OR use a session_file[sid] <- (y)
+    unimplemented!()
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct AuthResponse {
+    pub encrypted_envelope: EncryptedEnvelope,
+    pub Y: CurvePoint,
+    pub oprf_server_evalute_result: Vec<u8>,
+}
+
+/// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
+pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: NonVerifiableClient<Group, Hash>) -> (AuthVerifyRequest, VerifyTag) {
+    // generate_asymetric_key
+    // compute OPRF output
+    // decrypt (a, B) with rw
+    // compute KeyHidingAKE
+    // compute k1 and t1 % TODO sid, C, S ?
+    // return k1, t1 and X
+    unimplemented!()
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct AuthVerifyRequest {
+    pub t1: VerifyTag,
+    pub X: CurvePoint,
+}
+
+/// Return AuthVerifyResponse (t2) and OutputKey (K2)
+pub fn server_auth_finish(auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file: FileStorage) -> (AuthVerifyResponse, OutputKey) {
+    // retrieve (b, A) from file
+    // compute KeyHidingAKE
+    // compute k2 % TODO sid, C, S ?
+    // verify t1
+    // compute t2 and K2
+    // return K2, t2 % TODO what to do with K2 (session key) ? Store in db ? Expiration ? use a session_file[sid] <- K
+    unimplemented!()
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct AuthVerifyResponse {
+    pub t2: VerifyTag,
+}
+
+/// Return OutputKey (K1)
+pub fn client_auth_finish(t2: VerifyTag, k1: PreKey) -> OutputKey {
+    // verify t2
+    // compute K1
+    // return K1
+    unimplemented!()
+}
