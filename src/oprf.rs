@@ -19,8 +19,7 @@ pub fn client_init(password: &[u8]) -> NonVerifiableClientBlindResult<Group, Has
     ).expect("Unable to construct client")
 }
 
-pub fn server_evaluate(client_blind_result: BlindedElement<Group, Hash>) -> EvaluationElement<Group, Hash> {
-    let secret_salt = generate_secret();
+pub fn server_evaluate(client_blind_result: BlindedElement<Group, Hash>, secret_salt: [u8; 32]) -> EvaluationElement<Group, Hash> {
     let server = NonVerifiableServer::<Group, Hash>::new_with_key(&secret_salt)
         .expect("Unable to construct server");
 

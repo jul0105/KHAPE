@@ -12,47 +12,37 @@ mod tests {
     #[test]
     pub fn try_oprf_fn() {
         let password = b"input";
+
         // Client
         let client_blind_result = oprf::client_init(password);
+        println!("VOPRF blind result: {:?}", client_blind_result.message.serialize());
 
         // Server
         let secret_salt = oprf::generate_secret();
-        let client_blind_message = client_blind_result.message.clone();
-        let server_evaluate_result = oprf::server_evaluate(client_blind_message);
+        let server_evaluate_result = oprf::server_evaluate(client_blind_result.message.clone(), secret_salt);
         println!("VOPRF secret salt: {:?}", secret_salt);
 
         // Client
         let client_finalize_result = oprf::client_finish(client_blind_result, server_evaluate_result);
-
         println!("VOPRF output: {:?}", client_finalize_result.to_vec());
 
+
+        println!();
         // Retry
 
 
         // Client
-        let mut client_rng = OsRng;
-        let client_blind_result = NonVerifiableClient::<Group, Hash>::blind(
-            password.to_vec(),
-            &mut client_rng,
-        ).expect("Unable to construct client");
+        let client_blind_result2 = oprf::client_init(password);
+        println!("VOPRF blind result: {:?}", client_blind_result2.message.serialize());
 
         // Server
-        let server2 = NonVerifiableServer::<Group, Hash>::new_with_key(&secret_salt)
-            .expect("Unable to construct server");
-
-        let server_evaluate_result = server2.evaluate(
-            client_blind_result.message,
-            None,
-        ).expect("Unable to perform server evaluate");
+        let server_evaluate_result2 = oprf::server_evaluate(client_blind_result2.message.clone(), secret_salt);
         println!("VOPRF secret salt: {:?}", secret_salt);
 
         // Client
-        let client_finalize_result2 = client_blind_result.state.finalize(
-            server_evaluate_result.message,
-            None,
-        ).expect("Unable to perform client finalization");
-
+        let client_finalize_result2 = oprf::client_finish(client_blind_result2, server_evaluate_result2);
         println!("VOPRF output: {:?}", client_finalize_result2.to_vec());
-        assert_eq!(client_finalize_result, client_finalize_result2.to_vec());
+
+        assert_eq!(client_finalize_result, client_finalize_result2);
     }
 }
