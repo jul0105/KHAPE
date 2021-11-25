@@ -7,6 +7,9 @@ use voprf::{BlindedElement, NonVerifiableClient, NonVerifiableClientBlindResult,
 use crate::encryption::{EncryptedEnvelope, Envelope};
 use crate::group;
 use crate::oprf;
+use crate::group::generate_keys;
+use crate::tripledh;
+use crate::prf;
 
 pub type Group = curve25519_dalek::ristretto::RistrettoPoint;
 pub type Hash = sha3::Sha3_256;
@@ -170,9 +173,9 @@ mod tests {
 //                 REGISTER                 //
 //////////////////////////////////////////////
 
-type VerifyTag = String;
-type PreKey = String;
-type OutputKey = String;
+type PreKey = [u8; 32];
+type OutputKey = Option<[u8; 32]>;
+type VerifyTag = OutputKey;
 type FileStorage = Vec<FileEntry>;
 
 
@@ -181,13 +184,16 @@ pub struct EphemeralKeys {
     public: CurvePoint,
 }
 
-/// Return AuthRequest (uid and oprf_client_blind_result)
-pub fn client_auth_start(uid: &str, pw: &[u8]) -> AuthRequest {
-    // similar to client_register_start
-    // compute OPRF initialization
-    // add OPRF h1 and uid to a struct
-    // return struct
-    unimplemented!()
+/// Return AuthRequest (uid and oprf_client_blind_result) and oprf_client_state
+pub fn client_auth_start(uid: &str, pw: &[u8]) -> (RegisterRequest, NonVerifiableClient<Group, Hash>) { // TODO similar to client_register_start
+    // Compute OPRF initialization
+    let (client_state, client_blind_result) = oprf::client_init(pw);
+
+    // Add OPRF client blind and uid to a struct
+    (RegisterRequest {
+        uid: String::from(uid),
+        oprf_client_blind_result: client_blind_result,
+    }, client_state)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -197,12 +203,27 @@ pub struct AuthRequest {
 }
 
 /// Return AuthResponse (e, Y, oprf_server_evalute_result) and EphemeralKeys (server Y and y)
-pub fn server_auth_start(auth_request: AuthRequest, file: FileStorage) -> (AuthResponse, EphemeralKeys) {
-    // generate_asymetric_key
-    // retrieve (e, salt) from file
-    // compute OPRF h2 % TODO ensure that client-side attacker cannot retrieve salt (by inputing anoter user uid)
-    // return e, Y, y, h2 % TODO how to store y ? Store in file[uid] (remove it on server_auth_finish) OR use a session_file[sid] <- (y)
-    unimplemented!()
+pub fn server_auth_start(auth_request: AuthRequest, file_entry: FileEntry) -> (AuthResponse, EphemeralKeys) {
+    // Generate asymmetric key
+    let (y, Y) = generate_keys();
+
+    // Retrieve (e, salt) from file
+    let secret_salt = file_entry.secret_salt.clone();
+    let encrypted_envelope = file_entry.e.clone();
+
+    // Compute OPRF server evaluate
+    let server_evaluate_result = oprf::server_evaluate(auth_request.oprf_client_blind_result, secret_salt);
+
+    // Return e, Y, y, h2 % TODO how to store y ? Store in file[uid] (remove it on server_auth_finish) OR use a session_file[sid] <- (y)
+    (AuthResponse {
+        encrypted_envelope,
+        Y,
+        oprf_server_evalute_result: server_evaluate_result,
+    },
+    EphemeralKeys {
+        private: y,
+        public: Y,
+    })
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -213,14 +234,27 @@ pub struct AuthResponse {
 }
 
 /// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
-pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: NonVerifiableClient<Group, Hash>) -> (AuthVerifyRequest, VerifyTag) {
-    // generate_asymetric_key
-    // compute OPRF output
+pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: NonVerifiableClient<Group, Hash>) -> (AuthVerifyRequest, PreKey) {
+    // Generate asymmetric key
+    let (x, X) = generate_keys();
+
+    // Compute OPRF output
+    let rw = oprf::client_finish(oprf_client_state, auth_response.oprf_server_evalute_result);
+
     // decrypt (a, B) with rw
-    // compute KeyHidingAKE
-    // compute k1 and t1 % TODO sid, C, S ?
-    // return k1, t1 and X
-    unimplemented!()
+    let envelope = auth_response.encrypted_envelope.decrypt();
+
+    // Compute KeyHidingAKE
+    let k1 = tripledh::compute_client(envelope.B, auth_response.Y, envelope.a, x);
+
+    // Compute tag t1
+    let t1 = Some(prf::hmac(&k1, b"1"));
+
+    // Return k1, t1 and X
+    (AuthVerifyRequest {
+        t1,
+        X,
+    }, k1)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -230,14 +264,27 @@ pub struct AuthVerifyRequest {
 }
 
 /// Return AuthVerifyResponse (t2) and OutputKey (K2)
-pub fn server_auth_finish(auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file: FileStorage) -> (AuthVerifyResponse, OutputKey) {
-    // retrieve (b, A) from file
-    // compute KeyHidingAKE
-    // compute k2 % TODO sid, C, S ?
-    // verify t1
-    // compute t2 and K2
-    // return K2, t2 % TODO what to do with K2 (session key) ? Store in db ? Expiration ? use a session_file[sid] <- K
-    unimplemented!()
+pub fn server_auth_finish(auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file_entry: FileEntry) -> (AuthVerifyResponse, OutputKey) {
+    // Retrieve (b, A) from file
+    let b = file_entry.b.clone();
+    let A = file_entry.A.clone();
+
+    // Compute KeyHidingAKE
+    let k2 = tripledh::compute_server(A, auth_verify_request.X, b, ephemeral_keys.private);
+
+    // Verify tag t1 and compute tag t2 and output key
+    let (t2, K2) = match auth_verify_request.t1 == Some(prf::hmac(&k2, b"1")) { // TODO ok if none ?
+        true => (
+            Some(prf::hmac(&k2, b"2")),
+            Some(prf::hmac(&k2, b"0"))
+        ),
+        false => (None, None),
+    };
+
+    // Return K2, t2 % TODO what to do with K2 (session key) ? Store in db ? Expiration ? use a session_file[sid] <- K
+    (AuthVerifyResponse {
+        t2,
+    }, K2)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -246,9 +293,10 @@ pub struct AuthVerifyResponse {
 }
 
 /// Return OutputKey (K1)
-pub fn client_auth_finish(t2: VerifyTag, k1: PreKey) -> OutputKey {
-    // verify t2
-    // compute K1
-    // return K1
-    unimplemented!()
+pub fn client_auth_finish(auth_verify_response: AuthVerifyResponse, k1: PreKey) -> OutputKey {
+    // Verify tag t2 and compute output key
+    match auth_verify_response.t2 == Some(prf::hmac(&k1, b"2")) { // TODO ok if none ?
+        true => Some(prf::hmac(&k1, b"0")),
+        false => None,
+    }
 }
