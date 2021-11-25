@@ -1,5 +1,5 @@
 use crate::group::compute_shared_key;
-use sha3::{Sha3_512, Digest};
+use sha3::{Sha3_256, Digest};
 use crate::khape::{CurvePoint, CurveScalar};
 use std::convert::TryFrom;
 
@@ -10,7 +10,7 @@ pub fn compute_client(B: CurvePoint, Y: CurvePoint, a: CurveScalar, x: CurveScal
     let o_client_3 = compute_shared_key(x.to_bytes(), Y.to_bytes());
     let o_client = [o_client_1, o_client_2, o_client_3].concat();
 
-    <[u8; 32]>::try_from(Sha3_512::digest(&o_client).to_vec()).unwrap() // TODO sid, C, S ?
+    <[u8; 32]>::try_from(Sha3_256::digest(&o_client).to_vec()).unwrap() // TODO sid, C, S ?
 }
 
 pub fn compute_server(A: CurvePoint, X: CurvePoint, b: CurveScalar, y: CurveScalar) -> [u8; 32] {
@@ -20,7 +20,7 @@ pub fn compute_server(A: CurvePoint, X: CurvePoint, b: CurveScalar, y: CurveScal
     let o_server_3 = compute_shared_key(y.to_bytes(), X.to_bytes());
     let o_server = [o_server_1, o_server_2, o_server_3].concat();
 
-    <[u8; 32]>::try_from(Sha3_512::digest(&o_server).to_vec()).unwrap() // TODO sid, C, S ?
+    <[u8; 32]>::try_from(Sha3_256::digest(&o_server).to_vec()).unwrap() // TODO sid, C, S ?
 }
 
 

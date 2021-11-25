@@ -140,12 +140,12 @@ pub struct EphemeralKeys {
 }
 
 /// Return AuthRequest (uid and oprf_client_blind_result) and oprf_client_state
-pub fn client_auth_start(uid: &str, pw: &[u8]) -> (RegisterRequest, NonVerifiableClient<Group, Hash>) { // TODO similar to client_register_start
+pub fn client_auth_start(uid: &str, pw: &[u8]) -> (AuthRequest, NonVerifiableClient<Group, Hash>) { // TODO similar to client_register_start
     // Compute OPRF initialization
     let (client_state, client_blind_result) = oprf::client_init(pw);
 
     // Add OPRF client blind and uid to a struct
-    (RegisterRequest {
+    (AuthRequest {
         uid: String::from(uid),
         oprf_client_blind_result: client_blind_result,
     }, client_state)
@@ -158,7 +158,7 @@ pub struct AuthRequest {
 }
 
 /// Return AuthResponse (e, Y, oprf_server_evalute_result) and EphemeralKeys (server Y and y)
-pub fn server_auth_start(auth_request: AuthRequest, file_entry: FileEntry) -> (AuthResponse, EphemeralKeys) {
+pub fn server_auth_start(auth_request: AuthRequest, file_entry: &FileEntry) -> (AuthResponse, EphemeralKeys) {
     // Generate asymmetric key
     let (y, Y) = generate_keys();
 
@@ -219,7 +219,7 @@ pub struct AuthVerifyRequest {
 }
 
 /// Return AuthVerifyResponse (t2) and OutputKey (K2)
-pub fn server_auth_finish(auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file_entry: FileEntry) -> (AuthVerifyResponse, OutputKey) {
+pub fn server_auth_finish(auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file_entry: &FileEntry) -> (AuthVerifyResponse, OutputKey) {
     // Retrieve (b, A) from file
     let b = file_entry.b.clone();
     let A = file_entry.A.clone();
@@ -268,7 +268,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn register() {
+    fn test_register() {
         let uid = "1234";
         let password = b"test";
         let (register_request, oprf_client_state) = client_register_start(uid, password);
@@ -287,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn register_with_serialization() {
+    fn test_register_with_serialization() {
         let uid = "1234";
         let password = b"test";
 
@@ -313,12 +313,31 @@ mod tests {
         let file_entry = server_register_finish(register_finish_deserialized, b, secret_salt);
     }
 
-    // #[test]
-    // fn test_auth() {
-    //     client_auth_start();
-    //     server_auth_start();
-    //     client_auth_ke();
-    //     server_auth_finish();
-    //     client_auth_finish();
-    // }
+    fn register() -> FileEntry {
+        let uid = "1234";
+        let password = b"test";
+
+        let (register_request, oprf_client_state) = client_register_start(uid, password);
+        let (register_response, b, secret_salt) = server_register_start(register_request);
+        let register_finish = client_register_finish(register_response, oprf_client_state);
+        server_register_finish(register_finish, b, secret_salt)
+    }
+
+    #[test]
+    fn test_auth() {
+        let uid = "1234";
+        let password = b"test";
+        let file_entry = register();
+
+        let (auth_request, oprf_client_state) = client_auth_start(uid, password);
+        let (auth_response, server_ephemeral_keys) = server_auth_start(auth_request, &file_entry);
+        let (auth_verify_request, k1) = client_auth_ke(auth_response, oprf_client_state);
+        let (auth_verify_response, K2) = server_auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
+        let K1 = client_auth_finish(auth_verify_response, k1);
+
+        println!("K1 : {:?}", K1);
+        println!("K2 : {:?}", K2);
+
+        assert_eq!(K1, K2);
+    }
 }
