@@ -8,6 +8,8 @@ mod oprf;
 mod group;
 mod tripledh;
 mod encryption;
+mod hash;
+mod prf;
 
 fn main() {
     println!("Start 3DH");
