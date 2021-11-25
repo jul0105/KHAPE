@@ -10,6 +10,7 @@ mod tripledh;
 mod encryption;
 mod hash;
 mod prf;
+mod ideal_cipher;
 
 fn main() {
     println!("Start 3DH");
