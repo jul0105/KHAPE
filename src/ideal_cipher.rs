@@ -24,16 +24,6 @@ pub fn encrypt_feistel(key: [u8; 32], plaintext: [u8; INPUT_SIZE]) -> [u8; INPUT
     <[u8; 64]>::try_from([left_part, right_part].concat()).unwrap()
 }
 
-fn feistel_round(key: [u8; 32], round_nb: [u8; 1], left_part: [u8; 32], right_part: [u8; 32]) -> [u8; 32] {
-    let hash_result: [u8; 32] = <[u8; 32]>::from(Sha3_256::new()
-        .chain(key)
-        .chain(round_nb)
-        .chain(right_part)
-        .finalize());
-    let result: Vec<u8> = left_part.iter().zip(hash_result.iter()).map(|(&a, &b)| a ^ b).collect();
-    <[u8; 32]>::try_from(result).unwrap()
-}
-
 pub fn decrypt_feistel(key: [u8; 32], ciphertext: [u8; INPUT_SIZE]) -> [u8; INPUT_SIZE] {
     // Split plaintext in 2 equal part Ln+1 and Rn+1
     let mut right_part: [u8; 32] = <[u8; 32]>::try_from(&ciphertext[0..32]).unwrap();
@@ -50,6 +40,16 @@ pub fn decrypt_feistel(key: [u8; 32], ciphertext: [u8; INPUT_SIZE]) -> [u8; INPU
     right_part = feistel_round(key, [0u8], right_part, left_part);
 
     <[u8; 64]>::try_from([left_part, right_part].concat()).unwrap()
+}
+
+fn feistel_round(key: [u8; 32], round_nb: [u8; 1], left_part: [u8; 32], right_part: [u8; 32]) -> [u8; 32] {
+    let hash_result: [u8; 32] = <[u8; 32]>::from(Sha3_256::new()
+        .chain(key)
+        .chain(round_nb)
+        .chain(right_part)
+        .finalize());
+    let result: Vec<u8> = left_part.iter().zip(hash_result.iter()).map(|(&a, &b)| a ^ b).collect();
+    <[u8; 32]>::try_from(result).unwrap()
 }
 
 
