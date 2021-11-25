@@ -10,6 +10,7 @@ use crate::oprf;
 use crate::group::generate_keys;
 use crate::tripledh;
 use crate::prf;
+use std::convert::TryFrom;
 
 pub type Group = curve25519_dalek::ristretto::RistrettoPoint;
 pub type Hash = sha3::Sha3_256;
@@ -100,7 +101,7 @@ pub fn client_register_finish(register_response: RegisterResponse, oprf_client_s
         a,
         B: register_response.B
     };
-    let encrypted_envelope = envelope.encrypt();
+    let encrypted_envelope = envelope.encrypt(<[u8; 32]>::try_from(rw).unwrap());
 
     // Return ciphertext
     RegisterFinish {
@@ -197,7 +198,7 @@ pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: NonVerifia
     let rw = oprf::client_finish(oprf_client_state, auth_response.oprf_server_evalute_result);
 
     // decrypt (a, B) with rw
-    let envelope = auth_response.encrypted_envelope.decrypt();
+    let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(rw).unwrap());
 
     // Compute KeyHidingAKE
     let k1 = tripledh::compute_client(envelope.B, auth_response.Y, envelope.a, x);
@@ -338,6 +339,7 @@ mod tests {
         println!("K1 : {:?}", K1);
         println!("K2 : {:?}", K2);
 
+        assert!(K1.is_some());
         assert_eq!(K1, K2);
     }
 }

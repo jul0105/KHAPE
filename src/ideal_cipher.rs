@@ -39,7 +39,7 @@ pub fn decrypt_feistel(key: [u8; 32], ciphertext: [u8; INPUT_SIZE]) -> [u8; INPU
     // Final round (without mix)
     right_part = feistel_round(key, [0u8], right_part, left_part);
 
-    <[u8; 64]>::try_from([left_part, right_part].concat()).unwrap()
+    <[u8; 64]>::try_from([right_part, left_part].concat()).unwrap()
 }
 
 fn feistel_round(key: [u8; 32], round_nb: [u8; 1], left_part: [u8; 32], right_part: [u8; 32]) -> [u8; 32] {
@@ -59,12 +59,16 @@ mod tests {
 
     #[test]
     fn test_encrypt_decrypt() {
-        let plaintext = [1u8; 64];
+        let plaintext = [189, 206, 64, 10, 51, 196, 203, 62, 105, 37, 166, 237, 79, 135, 252, 150, 218, 250, 110, 164, 152, 156, 103, 156, 56, 193, 184, 151, 62, 156, 211, 199, 220, 249, 70, 200, 28, 188, 9, 7, 60, 182, 247, 218, 96, 131, 73, 205, 149, 39, 75, 246, 45, 113, 6, 134, 165, 66, 31, 58, 148, 142, 242, 197];
         let key = [2u8; 32];
 
         let ciphertext = encrypt_feistel(key, plaintext);
 
         let plaintext2 = decrypt_feistel(key, ciphertext);
+
+        println!("plaintext1 : {:?}", plaintext);
+        println!("ciphertext : {:?}", ciphertext);
+        println!("plaintext2 : {:?}", plaintext2);
 
         assert_eq!(plaintext, plaintext2);
     }
