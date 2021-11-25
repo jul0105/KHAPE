@@ -17,6 +17,12 @@ pub type CurvePoint = curve25519_dalek::montgomery::MontgomeryPoint;
 pub type CurveScalar = curve25519_dalek::scalar::Scalar;
 
 
+
+
+//////////////////////////////////////////////
+//                  LOGIN                   //
+//////////////////////////////////////////////
+
 // Serialize (send)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterRequest {
@@ -112,57 +118,6 @@ pub fn server_register_finish(register_finish: RegisterFinish, b: CurveScalar, s
         b,
         A: register_finish.A,
         secret_salt,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn register() {
-        let uid = "1234";
-        let password = b"test";
-        let (register_request, oprf_client_state) = client_register_start(uid, password);
-
-        println!("Sending register request : {:?}", register_request);
-
-        let (register_response, b, secret_salt) = server_register_start(register_request);
-
-        println!("Sending register response : {:?}", register_response);
-
-        let register_finish = client_register_finish(register_response, oprf_client_state);
-
-        println!("Sending register finish : {:?}", register_finish);
-
-        let file_entry = server_register_finish(register_finish, b, secret_salt);
-    }
-
-    #[test]
-    fn register_with_serialization() {
-        let uid = "1234";
-        let password = b"test";
-
-
-        let (register_request, oprf_client_state) = client_register_start(uid, password);
-
-        let register_request_serialized = serde_json::to_string(&register_request).unwrap();
-        println!("Sending register request : {:?}", register_request_serialized);
-        let register_request_deserialized: RegisterRequest = serde_json::from_str(&register_request_serialized).unwrap();
-
-        let (register_response, b, secret_salt) = server_register_start(register_request_deserialized);
-
-        let register_response_serialized = serde_json::to_string(&register_response).unwrap();
-        println!("Sending register response : {:?}", register_response_serialized);
-        let register_response_deserialized: RegisterResponse = serde_json::from_str(&register_response_serialized).unwrap();
-
-        let register_finish = client_register_finish(register_response_deserialized, oprf_client_state);
-
-        let register_finish_serialized = serde_json::to_string(&register_finish).unwrap();
-        println!("Sending register finish : {:?}", register_finish_serialized);
-        let register_finish_deserialized: RegisterFinish = serde_json::from_str(&register_finish_serialized).unwrap();
-
-        let file_entry = server_register_finish(register_finish_deserialized, b, secret_salt);
     }
 }
 
@@ -299,4 +254,71 @@ pub fn client_auth_finish(auth_verify_response: AuthVerifyResponse, k1: PreKey) 
         true => Some(prf::hmac(&k1, b"0")),
         false => None,
     }
+}
+
+
+
+
+//////////////////////////////////////////////
+//                   TEST                   //
+//////////////////////////////////////////////
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn register() {
+        let uid = "1234";
+        let password = b"test";
+        let (register_request, oprf_client_state) = client_register_start(uid, password);
+
+        println!("Sending register request : {:?}", register_request);
+
+        let (register_response, b, secret_salt) = server_register_start(register_request);
+
+        println!("Sending register response : {:?}", register_response);
+
+        let register_finish = client_register_finish(register_response, oprf_client_state);
+
+        println!("Sending register finish : {:?}", register_finish);
+
+        let file_entry = server_register_finish(register_finish, b, secret_salt);
+    }
+
+    #[test]
+    fn register_with_serialization() {
+        let uid = "1234";
+        let password = b"test";
+
+
+        let (register_request, oprf_client_state) = client_register_start(uid, password);
+
+        let register_request_serialized = serde_json::to_string(&register_request).unwrap();
+        println!("Sending register request : {:?}", register_request_serialized);
+        let register_request_deserialized: RegisterRequest = serde_json::from_str(&register_request_serialized).unwrap();
+
+        let (register_response, b, secret_salt) = server_register_start(register_request_deserialized);
+
+        let register_response_serialized = serde_json::to_string(&register_response).unwrap();
+        println!("Sending register response : {:?}", register_response_serialized);
+        let register_response_deserialized: RegisterResponse = serde_json::from_str(&register_response_serialized).unwrap();
+
+        let register_finish = client_register_finish(register_response_deserialized, oprf_client_state);
+
+        let register_finish_serialized = serde_json::to_string(&register_finish).unwrap();
+        println!("Sending register finish : {:?}", register_finish_serialized);
+        let register_finish_deserialized: RegisterFinish = serde_json::from_str(&register_finish_serialized).unwrap();
+
+        let file_entry = server_register_finish(register_finish_deserialized, b, secret_salt);
+    }
+
+    // #[test]
+    // fn test_auth() {
+    //     client_auth_start();
+    //     server_auth_start();
+    //     client_auth_ke();
+    //     server_auth_finish();
+    //     client_auth_finish();
+    // }
 }
