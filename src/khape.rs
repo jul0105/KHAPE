@@ -314,10 +314,7 @@ mod tests {
         let file_entry = server_register_finish(register_finish_deserialized, b, secret_salt);
     }
 
-    fn register() -> FileEntry {
-        let uid = "1234";
-        let password = b"test";
-
+    fn register(uid: &str, password: &[u8]) -> FileEntry {
         let (register_request, oprf_client_state) = client_register_start(uid, password);
         let (register_response, b, secret_salt) = server_register_start(register_request);
         let register_finish = client_register_finish(register_response, oprf_client_state);
@@ -328,7 +325,7 @@ mod tests {
     fn test_auth() {
         let uid = "1234";
         let password = b"test";
-        let file_entry = register();
+        let file_entry = register(uid, password);
 
         let (auth_request, oprf_client_state) = client_auth_start(uid, password);
         let (auth_response, server_ephemeral_keys) = server_auth_start(auth_request, &file_entry);
@@ -340,6 +337,41 @@ mod tests {
         println!("K2 : {:?}", K2);
 
         assert!(K1.is_some());
+        assert_eq!(K1, K2);
+    }
+
+    fn auth(uid: &str, password: &[u8], file_entry: FileEntry) -> (OutputKey, OutputKey) {
+        let (auth_request, oprf_client_state) = client_auth_start(uid, password);
+        let (auth_response, server_ephemeral_keys) = server_auth_start(auth_request, &file_entry);
+        let (auth_verify_request, k1) = client_auth_ke(auth_response, oprf_client_state);
+        let (auth_verify_response, K2) = server_auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
+        let K1 = client_auth_finish(auth_verify_response, k1);
+        (K1, K2)
+    }
+
+    #[test]
+    fn test_auth_same_password() {
+        let uid = "1234";
+        let password = b"test";
+
+        let file_entry = register(uid, password);
+        let (K1, K2) = auth(uid, password, file_entry);
+
+        assert!(K1.is_some());
+        assert_eq!(K1, K2);
+    }
+
+    #[test]
+    fn test_auth_different_password() {
+        let uid = "1234";
+        let password_register = b"test";
+        let password_auth = b"testt";
+
+        let file_entry = register(uid, password_register);
+        let (K1, K2) = auth(uid, password_auth, file_entry);
+
+        assert!(K1.is_none());
+        assert!(K2.is_none());
         assert_eq!(K1, K2);
     }
 }
