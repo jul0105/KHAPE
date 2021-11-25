@@ -8,9 +8,8 @@ use crate::encryption::{EncryptedEnvelope, Envelope};
 use crate::group;
 use crate::oprf;
 
-type Group = curve25519_dalek::ristretto::RistrettoPoint;
-type Hash = sha2::Sha512;
-
+pub type Group = curve25519_dalek::ristretto::RistrettoPoint;
+pub type Hash = sha3::Sha3_256;
 pub type CurvePoint = curve25519_dalek::montgomery::MontgomeryPoint;
 pub type CurveScalar = curve25519_dalek::scalar::Scalar;
 
