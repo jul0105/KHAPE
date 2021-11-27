@@ -1,7 +1,10 @@
 use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::montgomery::MontgomeryPoint;
+use curve25519_dalek::montgomery::{MontgomeryPoint, elligator_decode, elligator_encode};
 use curve25519_dalek::constants::{ED25519_BASEPOINT_TABLE, X25519_BASEPOINT};
 use rand::{thread_rng, Rng};
+use curve25519_dalek::field::FieldElement;
+
+const SIGN: u8 = 0; // TODO elligator sign
 
 pub fn compute_private_key(bytes: [u8; 32]) -> Scalar {
     clamp_scalar(bytes)
@@ -20,10 +23,21 @@ pub fn generate_private_key() -> Scalar {
 }
 
 pub fn generate_keys() -> (Scalar, MontgomeryPoint) {
-    let private_key = generate_private_key();
-    (private_key, compute_public_key(private_key))
+    loop {
+        let private_key = generate_private_key();
+        let public_key = compute_public_key(private_key);
+        if elligator_decode(&public_key, SIGN.into()).is_some() {
+            return (private_key, public_key)
+        }
+    }
 }
 
+pub fn decode_public_key(point: &MontgomeryPoint) -> [u8; 32] {
+    elligator_decode(point, SIGN.into()).unwrap().to_bytes()
+}
+pub fn encode_public_key(bytes: &[u8; 32]) -> MontgomeryPoint {
+    elligator_encode(&FieldElement::from_bytes(bytes))
+}
 
 fn clamp_scalar(mut scalar: [u8; 32]) -> Scalar { // From x25519-dalek library
     scalar[0] &= 248;
@@ -31,4 +45,17 @@ fn clamp_scalar(mut scalar: [u8; 32]) -> Scalar { // From x25519-dalek library
     scalar[31] |= 64;
 
     Scalar::from_bits(scalar)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_key_with_elligator() {
+        let (private_key, public_key) = generate_keys();
+        let public_key_elligator = decode_public_key(&public_key);
+        let public_key2 = encode_public_key(&public_key_elligator);
+        assert_eq!(public_key, public_key2)
+    }
 }
