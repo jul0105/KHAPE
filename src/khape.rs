@@ -15,6 +15,7 @@ use std::convert::TryFrom;
 pub type Group = curve25519_dalek::ristretto::RistrettoPoint;
 pub type Hash = sha3::Sha3_256;
 pub type RawPublicKey = curve25519_dalek::montgomery::MontgomeryPoint;
+pub type SharedKey = curve25519_dalek::montgomery::MontgomeryPoint;
 pub type PublicKey = curve25519_dalek::field::FieldElement;
 pub type PrivateKey = curve25519_dalek::scalar::Scalar;
 

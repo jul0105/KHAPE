@@ -3,7 +3,7 @@ use curve25519_dalek::montgomery::{MontgomeryPoint, elligator_decode, elligator_
 use curve25519_dalek::constants::{ED25519_BASEPOINT_TABLE, X25519_BASEPOINT};
 use rand::{thread_rng, Rng};
 use curve25519_dalek::field::FieldElement;
-use crate::khape::{PublicKey, PrivateKey, RawPublicKey};
+use crate::khape::{PublicKey, PrivateKey, RawPublicKey, SharedKey};
 
 const SIGN: u8 = 0; // TODO elligator sign
 
@@ -11,8 +11,8 @@ fn compute_public_key(private_key: PrivateKey) -> RawPublicKey {
     X25519_BASEPOINT * private_key
 }
 
-pub fn compute_shared_key(own_private_key: [u8; 32], opposing_public_key: [u8; 32]) -> [u8; 32] {
-    (Scalar::from_bits(own_private_key) * encode_public_key(&FieldElement::from_bytes(&opposing_public_key))).to_bytes() // From x25519-dalek library
+pub fn compute_shared_key(own_private_key: PrivateKey, opposing_public_key: PublicKey) -> SharedKey {
+    (own_private_key * encode_public_key(&opposing_public_key))
 }
 
 fn generate_private_key() -> PrivateKey {

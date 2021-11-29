@@ -5,20 +5,22 @@ use std::convert::TryFrom;
 
 pub fn compute_client(B: PublicKey, Y: PublicKey, a: PrivateKey, x: PrivateKey) -> [u8; 32] {
     // B^x || Y^a || Y^x
-    let o_client_1 = compute_shared_key(x.to_bytes(), B.to_bytes());
-    let o_client_2 = compute_shared_key(a.to_bytes(), Y.to_bytes());
-    let o_client_3 = compute_shared_key(x.to_bytes(), Y.to_bytes());
-    let o_client = [o_client_1, o_client_2, o_client_3].concat();
+    let o_client = [
+        compute_shared_key(x, B).to_bytes(),
+        compute_shared_key(a, Y).to_bytes(),
+        compute_shared_key(x, Y).to_bytes()
+    ].concat();
 
     <[u8; 32]>::try_from(Sha3_256::digest(&o_client).to_vec()).unwrap() // TODO sid, C, S ?
 }
 
 pub fn compute_server(A: PublicKey, X: PublicKey, b: PrivateKey, y: PrivateKey) -> [u8; 32] {
     // X^b || A^y || X^y
-    let o_server_1 = compute_shared_key(b.to_bytes(), X.to_bytes());
-    let o_server_2 = compute_shared_key(y.to_bytes(), A.to_bytes());
-    let o_server_3 = compute_shared_key(y.to_bytes(), X.to_bytes());
-    let o_server = [o_server_1, o_server_2, o_server_3].concat();
+    let o_server = [
+        compute_shared_key(b, X).to_bytes(),
+        compute_shared_key(y, A).to_bytes(),
+        compute_shared_key(y, X).to_bytes()
+    ].concat();
 
     <[u8; 32]>::try_from(Sha3_256::digest(&o_server).to_vec()).unwrap() // TODO sid, C, S ?
 }
