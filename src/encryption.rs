@@ -20,7 +20,6 @@ pub struct EncryptedEnvelope {
 
 impl Envelope {
     pub fn encrypt(&self, key: [u8; 32]) -> EncryptedEnvelope {
-        // TODO elligator encoding
         let plaintext = <[u8; 64]>::try_from([self.a.to_bytes(), self.B.to_bytes()].concat()).unwrap();
         let ciphertext = encrypt_feistel(key, plaintext);
 

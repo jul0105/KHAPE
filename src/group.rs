@@ -24,7 +24,7 @@ fn generate_private_key() -> PrivateKey {
     }
 }
 
-pub fn generate_keys() -> (PrivateKey, PublicKey) { // TODO try to return FieldElement instead of [u8; 32]
+pub fn generate_keys() -> (PrivateKey, PublicKey) {
     loop {
         let private_key = generate_private_key();
         let public_key = compute_public_key(private_key);
