@@ -12,12 +12,16 @@ use crate::tripledh;
 use crate::prf;
 use std::convert::TryFrom;
 
-pub type Group = curve25519_dalek::ristretto::RistrettoPoint;
-pub type Hash = sha3::Sha3_256;
-pub type RawPublicKey = curve25519_dalek::montgomery::MontgomeryPoint;
-pub type SharedKey = curve25519_dalek::montgomery::MontgomeryPoint;
-pub type PublicKey = curve25519_dalek::field::FieldElement;
-pub type PrivateKey = curve25519_dalek::scalar::Scalar;
+pub(crate) type Group = curve25519_dalek::ristretto::RistrettoPoint;
+pub(crate) type Hash = sha3::Sha3_256;
+pub(crate) type RawPublicKey = curve25519_dalek::montgomery::MontgomeryPoint;
+pub(crate) type SharedKey = curve25519_dalek::montgomery::MontgomeryPoint;
+pub(crate) type PublicKey = curve25519_dalek::field::FieldElement;
+pub(crate) type PrivateKey = curve25519_dalek::scalar::Scalar;
+type SecretSalt = [u8; 32];
+
+
+pub type OprfClientState = voprf::NonVerifiableClient<Group, Hash>;
 
 
 
@@ -29,22 +33,22 @@ pub type PrivateKey = curve25519_dalek::scalar::Scalar;
 // Serialize (send)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterRequest {
-    pub uid: String,
-    pub oprf_client_blind_result: Vec<u8>,
+    uid: String,
+    oprf_client_blind_result: Vec<u8>,
 }
 
 // Serialize (send)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterResponse {
-    pub B: PublicKey,
-    pub oprf_server_evalute_result: Vec<u8>,
+    B: PublicKey,
+    oprf_server_evalute_result: Vec<u8>,
 }
 
 // Serialize (send)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterFinish {
-    pub encrypted_envelope: EncryptedEnvelope,
-    pub A: PublicKey
+    encrypted_envelope: EncryptedEnvelope,
+    A: PublicKey
 }
 
 // Serialize (store)
@@ -57,7 +61,7 @@ pub struct FileEntry {
 }
 
 /// Return RegisterRequest and oprf_client_state
-pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, NonVerifiableClient<Group, Hash>) {
+pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, OprfClientState) {
     // Compute OPRF initialization
     let (client_state, client_blind_result) = oprf::client_init(pw);
 
@@ -71,7 +75,7 @@ pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, NonVerif
 // Sends uid and h1 (RegisterRequest)
 
 /// Return RegisterResponse (B and oprf_server_evaluate_result), b and secret_salt
-pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, PrivateKey, [u8; 32]) {
+pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, PrivateKey, SecretSalt) {
     // Generate asymmetric key
     let (b, B) = group::generate_keys();
 
@@ -91,7 +95,7 @@ pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResp
 // Response B and h2 (RegisterResponse)
 
 /// Return RegisterFinish (ciphertext, A)
-pub fn client_register_finish(register_response: RegisterResponse, oprf_client_state: NonVerifiableClient<Group, Hash>) -> RegisterFinish {
+pub fn client_register_finish(register_response: RegisterResponse, oprf_client_state: OprfClientState) -> RegisterFinish {
     // Generate asymmetric key
     let (a, A) = group::generate_keys();
 
@@ -114,7 +118,7 @@ pub fn client_register_finish(register_response: RegisterResponse, oprf_client_s
 
 // Sends e and A (RegisterFinish)
 
-pub fn server_register_finish(register_finish: RegisterFinish, b: PrivateKey, secret_salt: [u8; 32]) -> FileEntry {
+pub fn server_register_finish(register_finish: RegisterFinish, b: PrivateKey, secret_salt: SecretSalt) -> FileEntry {
     // Store (e, b, A, salt)
     FileEntry {
         e: register_finish.encrypted_envelope,
@@ -132,7 +136,7 @@ pub fn server_register_finish(register_finish: RegisterFinish, b: PrivateKey, se
 //////////////////////////////////////////////
 
 type PreKey = [u8; 32];
-type OutputKey = Option<[u8; 32]>;
+pub type OutputKey = Option<[u8; 32]>;
 type VerifyTag = OutputKey;
 type FileStorage = Vec<FileEntry>;
 
@@ -143,7 +147,7 @@ pub struct EphemeralKeys {
 }
 
 /// Return AuthRequest (uid and oprf_client_blind_result) and oprf_client_state
-pub fn client_auth_start(uid: &str, pw: &[u8]) -> (AuthRequest, NonVerifiableClient<Group, Hash>) { // TODO similar to client_register_start
+pub fn client_auth_start(uid: &str, pw: &[u8]) -> (AuthRequest, OprfClientState) { // TODO similar to client_register_start
     // Compute OPRF initialization
     let (client_state, client_blind_result) = oprf::client_init(pw);
 
@@ -156,8 +160,8 @@ pub fn client_auth_start(uid: &str, pw: &[u8]) -> (AuthRequest, NonVerifiableCli
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthRequest {
-    pub uid: String,
-    pub oprf_client_blind_result: Vec<u8>,
+    uid: String,
+    oprf_client_blind_result: Vec<u8>,
 }
 
 /// Return AuthResponse (e, Y, oprf_server_evalute_result) and EphemeralKeys (server Y and y)
@@ -186,13 +190,13 @@ pub fn server_auth_start(auth_request: AuthRequest, file_entry: &FileEntry) -> (
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthResponse {
-    pub encrypted_envelope: EncryptedEnvelope,
-    pub Y: PublicKey,
-    pub oprf_server_evalute_result: Vec<u8>,
+    encrypted_envelope: EncryptedEnvelope,
+    Y: PublicKey,
+    oprf_server_evalute_result: Vec<u8>,
 }
 
 /// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
-pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: NonVerifiableClient<Group, Hash>) -> (AuthVerifyRequest, PreKey) {
+pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: OprfClientState) -> (AuthVerifyRequest, PreKey) {
     // Generate asymmetric key
     let (x, X) = generate_keys();
 
@@ -217,8 +221,8 @@ pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: NonVerifia
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthVerifyRequest {
-    pub t1: VerifyTag,
-    pub X: PublicKey,
+    t1: VerifyTag,
+    X: PublicKey,
 }
 
 /// Return AuthVerifyResponse (t2) and OutputKey (K2)
@@ -247,7 +251,7 @@ pub fn server_auth_finish(auth_verify_request: AuthVerifyRequest, ephemeral_keys
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthVerifyResponse {
-    pub t2: VerifyTag,
+    t2: VerifyTag,
 }
 
 /// Return OutputKey (K1)
