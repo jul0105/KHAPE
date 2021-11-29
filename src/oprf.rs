@@ -1,7 +1,6 @@
 use rand::{thread_rng, Rng};
 use rand::rngs::OsRng;
 use voprf::{NonVerifiableClient, NonVerifiableClientBlindResult, NonVerifiableServer, NonVerifiableServerEvaluateResult, BlindedElement, EvaluationElement};
-use curve25519_dalek::digest::generic_array::GenericArray;
 use crate::khape::{Group, Hash};
 
 pub fn generate_secret() -> [u8; 32] {
