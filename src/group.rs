@@ -3,6 +3,7 @@ use curve25519_dalek::montgomery::{MontgomeryPoint, elligator_decode, elligator_
 use curve25519_dalek::constants::{ED25519_BASEPOINT_TABLE, X25519_BASEPOINT};
 use rand::{thread_rng, Rng};
 use curve25519_dalek::field::FieldElement;
+use crate::khape::CurvePoint;
 
 const SIGN: u8 = 0; // TODO elligator sign
 
@@ -15,29 +16,29 @@ fn compute_public_key(private_key: Scalar) -> MontgomeryPoint {
 }
 
 pub fn compute_shared_key(own_private_key: [u8; 32], opposing_public_key: [u8; 32]) -> [u8; 32] {
-    (clamp_scalar(own_private_key) * encode_public_key(&opposing_public_key)).to_bytes() // From x25519-dalek library
+    (clamp_scalar(own_private_key) * encode_public_key(&FieldElement::from_bytes(&opposing_public_key))).to_bytes() // From x25519-dalek library
 }
 
 fn generate_private_key() -> Scalar {
     clamp_scalar(thread_rng().gen::<[u8; 32]>())
 }
 
-pub fn generate_keys() -> (Scalar, [u8; 32]) { // TODO try to return FieldElement instead of [u8; 32]
+pub fn generate_keys() -> (Scalar, CurvePoint) { // TODO try to return FieldElement instead of [u8; 32]
     loop {
         let private_key = generate_private_key();
         let public_key = compute_public_key(private_key);
         let result = elligator_decode(&public_key, SIGN.into());
         if result.is_some() {
-            return (private_key, result.unwrap().to_bytes())
+            return (private_key, result.unwrap())
         }
     }
 }
 
-fn decode_public_key(point: &MontgomeryPoint) -> [u8; 32] {
-    elligator_decode(point, SIGN.into()).unwrap().to_bytes()
+fn decode_public_key(point: &MontgomeryPoint) -> CurvePoint {
+    elligator_decode(point, SIGN.into()).unwrap()
 }
-fn encode_public_key(bytes: &[u8; 32]) -> MontgomeryPoint {
-    elligator_encode(&FieldElement::from_bytes(bytes))
+fn encode_public_key(field_element: &CurvePoint) -> MontgomeryPoint {
+    elligator_encode(field_element)
 }
 
 fn clamp_scalar(mut scalar: [u8; 32]) -> Scalar { // From x25519-dalek library
