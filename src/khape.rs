@@ -18,7 +18,6 @@ pub(crate) type RawPublicKey = curve25519_dalek::montgomery::MontgomeryPoint;
 pub(crate) type SharedKey = curve25519_dalek::montgomery::MontgomeryPoint;
 pub(crate) type PublicKey = curve25519_dalek::field::FieldElement;
 pub(crate) type PrivateKey = curve25519_dalek::scalar::Scalar;
-type SecretSalt = [u8; 32];
 
 
 pub type OprfClientState = voprf::NonVerifiableClient<Group, Hash>;
@@ -60,6 +59,13 @@ pub struct FileEntry {
     pub secret_salt: [u8; 32],
 }
 
+// Serialize (store)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct PreRegisterSecrets {
+    private_key: PrivateKey,
+    secret_salt: [u8; 32]
+}
+
 /// Return RegisterRequest and oprf_client_state
 pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, OprfClientState) {
     // Compute OPRF initialization
@@ -75,7 +81,7 @@ pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, OprfClie
 // Sends uid and h1 (RegisterRequest)
 
 /// Return RegisterResponse (B and oprf_server_evaluate_result), b and secret_salt
-pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, PrivateKey, SecretSalt) {
+pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, PreRegisterSecrets) {
     // Generate asymmetric key
     let (b, B) = group::generate_keys();
 
@@ -89,7 +95,11 @@ pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResp
     (RegisterResponse {
         B,
         oprf_server_evalute_result: server_evaluate_result,
-    }, b, secret_salt)
+    },
+    PreRegisterSecrets {
+        private_key: b,
+        secret_salt
+    })
 }
 
 // Response B and h2 (RegisterResponse)
@@ -118,13 +128,13 @@ pub fn client_register_finish(register_response: RegisterResponse, oprf_client_s
 
 // Sends e and A (RegisterFinish)
 
-pub fn server_register_finish(register_finish: RegisterFinish, b: PrivateKey, secret_salt: SecretSalt) -> FileEntry {
+pub fn server_register_finish(register_finish: RegisterFinish, pre_register_secrets: PreRegisterSecrets) -> FileEntry {
     // Store (e, b, A, salt)
     FileEntry {
         e: register_finish.encrypted_envelope,
-        b,
+        b: pre_register_secrets.private_key,
         A: register_finish.A,
-        secret_salt,
+        secret_salt: pre_register_secrets.secret_salt
     }
 }
 
@@ -282,7 +292,7 @@ mod tests {
 
         println!("Sending register request : {:?}", register_request);
 
-        let (register_response, b, secret_salt) = server_register_start(register_request);
+        let (register_response, pre_register_secrets) = server_register_start(register_request);
 
         println!("Sending register response : {:?}", register_response);
 
@@ -290,7 +300,7 @@ mod tests {
 
         println!("Sending register finish : {:?}", register_finish);
 
-        let file_entry = server_register_finish(register_finish, b, secret_salt);
+        let file_entry = server_register_finish(register_finish, pre_register_secrets);
     }
 
     #[test]
@@ -305,7 +315,7 @@ mod tests {
         println!("Sending register request : {:?}", register_request_serialized);
         let register_request_deserialized: RegisterRequest = serde_json::from_str(&register_request_serialized).unwrap();
 
-        let (register_response, b, secret_salt) = server_register_start(register_request_deserialized);
+        let (register_response, pre_register_secrets) = server_register_start(register_request_deserialized);
 
         let register_response_serialized = serde_json::to_string(&register_response).unwrap();
         println!("Sending register response : {:?}", register_response_serialized);
@@ -317,14 +327,14 @@ mod tests {
         println!("Sending register finish : {:?}", register_finish_serialized);
         let register_finish_deserialized: RegisterFinish = serde_json::from_str(&register_finish_serialized).unwrap();
 
-        let file_entry = server_register_finish(register_finish_deserialized, b, secret_salt);
+        let file_entry = server_register_finish(register_finish_deserialized, pre_register_secrets);
     }
 
     fn register(uid: &str, password: &[u8]) -> FileEntry {
         let (register_request, oprf_client_state) = client_register_start(uid, password);
-        let (register_response, b, secret_salt) = server_register_start(register_request);
+        let (register_response, pre_register_secrets) = server_register_start(register_request);
         let register_finish = client_register_finish(register_response, oprf_client_state);
-        server_register_finish(register_finish, b, secret_salt)
+        server_register_finish(register_finish, pre_register_secrets)
     }
 
     #[test]
