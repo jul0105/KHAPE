@@ -14,7 +14,8 @@ use std::convert::TryFrom;
 
 pub type Group = curve25519_dalek::ristretto::RistrettoPoint;
 pub type Hash = sha3::Sha3_256;
-pub type CurvePoint = curve25519_dalek::montgomery::MontgomeryPoint;
+// pub type CurvePoint = curve25519_dalek::montgomery::MontgomeryPoint;
+pub type CurvePoint = [u8; 32];
 pub type CurveScalar = curve25519_dalek::scalar::Scalar;
 
 
