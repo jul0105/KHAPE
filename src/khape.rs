@@ -14,8 +14,9 @@ use std::convert::TryFrom;
 
 pub type Group = curve25519_dalek::ristretto::RistrettoPoint;
 pub type Hash = sha3::Sha3_256;
-pub type CurvePoint = curve25519_dalek::field::FieldElement;
-pub type CurveScalar = curve25519_dalek::scalar::Scalar;
+pub type RawPublicKey = curve25519_dalek::montgomery::MontgomeryPoint;
+pub type PublicKey = curve25519_dalek::field::FieldElement;
+pub type PrivateKey = curve25519_dalek::scalar::Scalar;
 
 
 
@@ -34,7 +35,7 @@ pub struct RegisterRequest {
 // Serialize (send)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterResponse {
-    pub B: CurvePoint,
+    pub B: PublicKey,
     pub oprf_server_evalute_result: Vec<u8>,
 }
 
@@ -42,15 +43,15 @@ pub struct RegisterResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterFinish {
     pub encrypted_envelope: EncryptedEnvelope,
-    pub A: CurvePoint
+    pub A: PublicKey
 }
 
 // Serialize (store)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct FileEntry {
     pub e: EncryptedEnvelope,
-    pub b: CurveScalar,
-    pub A: CurvePoint,
+    pub b: PrivateKey,
+    pub A: PublicKey,
     pub secret_salt: [u8; 32],
 }
 
@@ -69,7 +70,7 @@ pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, NonVerif
 // Sends uid and h1 (RegisterRequest)
 
 /// Return RegisterResponse (B and oprf_server_evaluate_result), b and secret_salt
-pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, CurveScalar, [u8; 32]) {
+pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, PrivateKey, [u8; 32]) {
     // Generate asymmetric key
     let (b, B) = group::generate_keys();
 
@@ -112,7 +113,7 @@ pub fn client_register_finish(register_response: RegisterResponse, oprf_client_s
 
 // Sends e and A (RegisterFinish)
 
-pub fn server_register_finish(register_finish: RegisterFinish, b: CurveScalar, secret_salt: [u8; 32]) -> FileEntry {
+pub fn server_register_finish(register_finish: RegisterFinish, b: PrivateKey, secret_salt: [u8; 32]) -> FileEntry {
     // Store (e, b, A, salt)
     FileEntry {
         e: register_finish.encrypted_envelope,
@@ -136,8 +137,8 @@ type FileStorage = Vec<FileEntry>;
 
 
 pub struct EphemeralKeys {
-    private: CurveScalar,
-    public: CurvePoint,
+    private: PrivateKey,
+    public: PublicKey,
 }
 
 /// Return AuthRequest (uid and oprf_client_blind_result) and oprf_client_state
@@ -185,7 +186,7 @@ pub fn server_auth_start(auth_request: AuthRequest, file_entry: &FileEntry) -> (
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthResponse {
     pub encrypted_envelope: EncryptedEnvelope,
-    pub Y: CurvePoint,
+    pub Y: PublicKey,
     pub oprf_server_evalute_result: Vec<u8>,
 }
 
@@ -216,7 +217,7 @@ pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: NonVerifia
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthVerifyRequest {
     pub t1: VerifyTag,
-    pub X: CurvePoint,
+    pub X: PublicKey,
 }
 
 /// Return AuthVerifyResponse (t2) and OutputKey (K2)

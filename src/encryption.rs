@@ -1,14 +1,14 @@
 use curve25519_dalek::montgomery::MontgomeryPoint;
 use serde::{Deserialize, Serialize};
 
-use crate::khape::{CurvePoint, CurveScalar};
+use crate::khape::{PublicKey, PrivateKey};
 use std::convert::TryFrom;
 use crate::ideal_cipher::{encrypt_feistel, decrypt_feistel};
 use serde_big_array::BigArray;
 
 pub struct Envelope {
-    pub a: CurveScalar,
-    pub B: CurvePoint,
+    pub a: PrivateKey,
+    pub B: PublicKey,
 }
 
 // Serialize (sends, store)
@@ -37,8 +37,8 @@ impl EncryptedEnvelope {
         let right_part: [u8; 32] = <[u8; 32]>::try_from(&plaintext[32..64]).unwrap();
 
         Envelope {
-            a: CurveScalar::from_bits(left_part),
-            B: CurvePoint::from_bytes(&right_part),
+            a: PrivateKey::from_bits(left_part),
+            B: PublicKey::from_bytes(&right_part),
         }
     }
 }

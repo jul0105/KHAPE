@@ -1,9 +1,9 @@
 use crate::group::compute_shared_key;
 use sha3::{Sha3_256, Digest};
-use crate::khape::{CurvePoint, CurveScalar};
+use crate::khape::{PublicKey, PrivateKey};
 use std::convert::TryFrom;
 
-pub fn compute_client(B: CurvePoint, Y: CurvePoint, a: CurveScalar, x: CurveScalar) -> [u8; 32] {
+pub fn compute_client(B: PublicKey, Y: PublicKey, a: PrivateKey, x: PrivateKey) -> [u8; 32] {
     // B^x || Y^a || Y^x
     let o_client_1 = compute_shared_key(x.to_bytes(), B.to_bytes());
     let o_client_2 = compute_shared_key(a.to_bytes(), Y.to_bytes());
@@ -13,7 +13,7 @@ pub fn compute_client(B: CurvePoint, Y: CurvePoint, a: CurveScalar, x: CurveScal
     <[u8; 32]>::try_from(Sha3_256::digest(&o_client).to_vec()).unwrap() // TODO sid, C, S ?
 }
 
-pub fn compute_server(A: CurvePoint, X: CurvePoint, b: CurveScalar, y: CurveScalar) -> [u8; 32] {
+pub fn compute_server(A: PublicKey, X: PublicKey, b: PrivateKey, y: PrivateKey) -> [u8; 32] {
     // X^b || A^y || X^y
     let o_server_1 = compute_shared_key(b.to_bytes(), X.to_bytes());
     let o_server_2 = compute_shared_key(y.to_bytes(), A.to_bytes());
