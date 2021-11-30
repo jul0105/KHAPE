@@ -1,6 +1,6 @@
 use rand::{thread_rng, Rng};
 use rand::rngs::OsRng;
-use voprf::{NonVerifiableClient, NonVerifiableClientBlindResult, NonVerifiableServer, NonVerifiableServerEvaluateResult, BlindedElement, EvaluationElement};
+use voprf::{NonVerifiableClient, NonVerifiableServer, BlindedElement, EvaluationElement};
 use crate::khape::{Group, Hash};
 
 pub fn generate_secret() -> [u8; 32] {

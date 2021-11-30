@@ -1,4 +1,3 @@
-use curve25519_dalek::montgomery::MontgomeryPoint;
 use serde::{Deserialize, Serialize};
 
 use crate::khape::{PublicKey, PrivateKey};

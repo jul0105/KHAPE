@@ -1,8 +1,4 @@
-use std::borrow::BorrowMut;
-
-use rand::{RngCore, rngs::OsRng};
 use serde::{Deserialize, Serialize};
-use voprf::{BlindedElement, NonVerifiableClient, NonVerifiableClientBlindResult, NonVerifiableServer};
 
 use crate::encryption::{EncryptedEnvelope, Envelope};
 use crate::group;
