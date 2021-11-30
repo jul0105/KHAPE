@@ -3,23 +3,23 @@ use sha3::{Sha3_256, Digest};
 use crate::khape::{PublicKey, PrivateKey};
 use std::convert::TryFrom;
 
-pub fn compute_client(B: PublicKey, Y: PublicKey, a: PrivateKey, x: PrivateKey) -> [u8; 32] {
+pub fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: PrivateKey, priv_x: PrivateKey) -> [u8; 32] {
     // B^x || Y^a || Y^x
     let o_client = [
-        compute_shared_key(x, B).to_bytes(),
-        compute_shared_key(a, Y).to_bytes(),
-        compute_shared_key(x, Y).to_bytes()
+        compute_shared_key(priv_x, pub_b).to_bytes(),
+        compute_shared_key(priv_a, pub_y).to_bytes(),
+        compute_shared_key(priv_x, pub_y).to_bytes()
     ].concat();
 
     <[u8; 32]>::try_from(Sha3_256::digest(&o_client).to_vec()).unwrap() // TODO sid, C, S ?
 }
 
-pub fn compute_server(A: PublicKey, X: PublicKey, b: PrivateKey, y: PrivateKey) -> [u8; 32] {
+pub fn compute_server(pub_a: PublicKey, pub_x: PublicKey, priv_b: PrivateKey, priv_y: PrivateKey) -> [u8; 32] {
     // X^b || A^y || X^y
     let o_server = [
-        compute_shared_key(b, X).to_bytes(),
-        compute_shared_key(y, A).to_bytes(),
-        compute_shared_key(y, X).to_bytes()
+        compute_shared_key(priv_b, pub_x).to_bytes(),
+        compute_shared_key(priv_y, pub_a).to_bytes(),
+        compute_shared_key(priv_y, pub_x).to_bytes()
     ].concat();
 
     <[u8; 32]>::try_from(Sha3_256::digest(&o_server).to_vec()).unwrap() // TODO sid, C, S ?

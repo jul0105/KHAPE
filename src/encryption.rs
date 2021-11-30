@@ -6,8 +6,8 @@ use crate::ideal_cipher::{encrypt_feistel, decrypt_feistel};
 use serde_big_array::BigArray;
 
 pub struct Envelope {
-    pub a: PrivateKey,
-    pub B: PublicKey,
+    pub priv_a: PrivateKey,
+    pub pub_b: PublicKey,
 }
 
 // Serialize (sends, store)
@@ -19,7 +19,7 @@ pub struct EncryptedEnvelope {
 
 impl Envelope {
     pub fn encrypt(&self, key: [u8; 32]) -> EncryptedEnvelope {
-        let plaintext = <[u8; 64]>::try_from([self.a.to_bytes(), self.B.to_bytes()].concat()).unwrap();
+        let plaintext = <[u8; 64]>::try_from([self.priv_a.to_bytes(), self.pub_b.to_bytes()].concat()).unwrap();
         let ciphertext = encrypt_feistel(key, plaintext);
 
         EncryptedEnvelope {
@@ -35,8 +35,8 @@ impl EncryptedEnvelope {
         let right_part: [u8; 32] = <[u8; 32]>::try_from(&plaintext[32..64]).unwrap();
 
         Envelope {
-            a: PrivateKey::from_bits(left_part),
-            B: PublicKey::from_bytes(&right_part),
+            priv_a: PrivateKey::from_bits(left_part),
+            pub_b: PublicKey::from_bytes(&right_part),
         }
     }
 }
@@ -50,10 +50,10 @@ mod tests {
     fn test_encrypt_decrypt() {
         let key = [1u8; 32];
 
-        let (a, B) = generate_keys();
+        let (priv_a, pub_b) = generate_keys();
         let envelope = Envelope {
-            a,
-            B,
+            priv_a,
+            pub_b,
         };
 
         let encrypted_envelope = envelope.encrypt(key);
@@ -61,11 +61,11 @@ mod tests {
 
         println!("a1 : {:?}", a);
         println!("B1 : {:?}", B);
-        println!("a2 : {:?}", envelope2.a);
-        println!("B2 : {:?}", envelope2.B);
+        println!("a2 : {:?}", envelope2.priv_a);
+        println!("B2 : {:?}", envelope2.pub_b);
 
-        assert_eq!(a, envelope2.a);
-        assert_eq!(B, envelope2.B);
+        assert_eq!(a, envelope2.priv_a);
+        assert_eq!(B, envelope2.pub_b);
 
     }
 }

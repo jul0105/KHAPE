@@ -35,7 +35,7 @@ pub struct RegisterRequest {
 // Serialize (send)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterResponse {
-    B: PublicKey,
+    pub_b: PublicKey,
     oprf_server_evalute_result: Vec<u8>,
 }
 
@@ -43,15 +43,15 @@ pub struct RegisterResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterFinish {
     encrypted_envelope: EncryptedEnvelope,
-    A: PublicKey
+    pub_a: PublicKey
 }
 
 // Serialize (store)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct FileEntry {
-    pub e: EncryptedEnvelope,
-    pub b: PrivateKey,
-    pub A: PublicKey,
+    pub encrypted_envelope: EncryptedEnvelope,
+    pub priv_b: PrivateKey,
+    pub pub_a: PublicKey,
     pub secret_salt: [u8; 32],
 }
 
@@ -63,9 +63,9 @@ pub struct PreRegisterSecrets {
 }
 
 /// Return RegisterRequest and oprf_client_state
-pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, OprfClientState) {
+pub fn client_register_start(uid: &str, password: &[u8]) -> (RegisterRequest, OprfClientState) {
     // Compute OPRF initialization
-    let (client_state, client_blind_result) = oprf::client_init(pw);
+    let (client_state, client_blind_result) = oprf::client_init(password);
 
     // Add OPRF client blind and uid to a struct
     (RegisterRequest {
@@ -79,7 +79,7 @@ pub fn client_register_start(uid: &str, pw: &[u8]) -> (RegisterRequest, OprfClie
 /// Return RegisterResponse (B and oprf_server_evaluate_result), b and secret_salt
 pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResponse, PreRegisterSecrets) {
     // Generate asymmetric key
-    let (b, B) = group::generate_keys();
+    let (priv_b, pub_b) = group::generate_keys();
 
     // Generate OPRF salt
     let secret_salt = oprf::generate_secret();
@@ -89,11 +89,11 @@ pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResp
 
     // Return B and h2 % TODO how to store salt and b (secret) ? Pre - store b and salt in file[uid] (remove it on server_register_finish) OR use a session_file[sid] < - (b, salt)
     (RegisterResponse {
-        B,
+        pub_b,
         oprf_server_evalute_result: server_evaluate_result,
     },
     PreRegisterSecrets {
-        private_key: b,
+        private_key: priv_b,
         secret_salt
     })
 }
@@ -103,24 +103,24 @@ pub fn server_register_start(register_request: RegisterRequest) -> (RegisterResp
 /// Return RegisterFinish (ciphertext, A)
 pub fn client_register_finish(register_response: RegisterResponse, oprf_client_state: OprfClientState) -> RegisterFinish {
     // Generate asymmetric key
-    let (a, A) = group::generate_keys();
+    let (priv_a, pub_a) = group::generate_keys();
 
     // Compute OPRF output
-    let rw = oprf::client_finish(oprf_client_state, register_response.oprf_server_evalute_result);
+    let oprf_output = oprf::client_finish(oprf_client_state, register_response.oprf_server_evalute_result);
 
     // TODO slow hash ?
 
     // Encrypt (a, B) with rw
     let envelope = Envelope {
-        a,
-        B: register_response.B
+        priv_a,
+        pub_b: register_response.pub_b
     };
-    let encrypted_envelope = envelope.encrypt(<[u8; 32]>::try_from(rw).unwrap());
+    let encrypted_envelope = envelope.encrypt(<[u8; 32]>::try_from(oprf_output).unwrap());
 
     // Return ciphertext
     RegisterFinish {
         encrypted_envelope,
-        A,
+        pub_a,
     }
 }
 
@@ -129,9 +129,9 @@ pub fn client_register_finish(register_response: RegisterResponse, oprf_client_s
 pub fn server_register_finish(register_finish: RegisterFinish, pre_register_secrets: PreRegisterSecrets) -> FileEntry {
     // Store (e, b, A, salt)
     FileEntry {
-        e: register_finish.encrypted_envelope,
-        b: pre_register_secrets.private_key,
-        A: register_finish.A,
+        encrypted_envelope: register_finish.encrypted_envelope,
+        priv_b: pre_register_secrets.private_key,
+        pub_a: register_finish.pub_a,
         secret_salt: pre_register_secrets.secret_salt
     }
 }
@@ -155,9 +155,9 @@ pub struct EphemeralKeys {
 }
 
 /// Return AuthRequest (uid and oprf_client_blind_result) and oprf_client_state
-pub fn client_auth_start(uid: &str, pw: &[u8]) -> (AuthRequest, OprfClientState) { // TODO similar to client_register_start
+pub fn client_auth_start(uid: &str, password: &[u8]) -> (AuthRequest, OprfClientState) { // TODO similar to client_register_start
     // Compute OPRF initialization
-    let (client_state, client_blind_result) = oprf::client_init(pw);
+    let (client_state, client_blind_result) = oprf::client_init(password);
 
     // Add OPRF client blind and uid to a struct
     (AuthRequest {
@@ -175,11 +175,11 @@ pub struct AuthRequest {
 /// Return AuthResponse (e, Y, oprf_server_evalute_result) and EphemeralKeys (server Y and y)
 pub fn server_auth_start(auth_request: AuthRequest, file_entry: &FileEntry) -> (AuthResponse, EphemeralKeys) {
     // Generate asymmetric key
-    let (y, Y) = generate_keys();
+    let (priv_y, pub_y) = generate_keys();
 
     // Retrieve (e, salt) from file
     let secret_salt = file_entry.secret_salt.clone();
-    let encrypted_envelope = file_entry.e.clone();
+    let encrypted_envelope = file_entry.encrypted_envelope.clone();
 
     // Compute OPRF server evaluate
     let server_evaluate_result = oprf::server_evaluate(auth_request.oprf_client_blind_result, secret_salt);
@@ -187,88 +187,88 @@ pub fn server_auth_start(auth_request: AuthRequest, file_entry: &FileEntry) -> (
     // Return e, Y, y, h2 % TODO how to store y ? Store in file[uid] (remove it on server_auth_finish) OR use a session_file[sid] <- (y)
     (AuthResponse {
         encrypted_envelope,
-        Y,
+        pub_y,
         oprf_server_evalute_result: server_evaluate_result,
     },
     EphemeralKeys {
-        private: y,
-        public: Y,
+        private: priv_y,
+        public: pub_y,
     })
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthResponse {
     encrypted_envelope: EncryptedEnvelope,
-    Y: PublicKey,
+    pub_y: PublicKey,
     oprf_server_evalute_result: Vec<u8>,
 }
 
 /// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
 pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: OprfClientState) -> (AuthVerifyRequest, PreKey) {
     // Generate asymmetric key
-    let (x, X) = generate_keys();
+    let (priv_x, pub_x) = generate_keys();
 
     // Compute OPRF output
-    let rw = oprf::client_finish(oprf_client_state, auth_response.oprf_server_evalute_result);
+    let oprf_output = oprf::client_finish(oprf_client_state, auth_response.oprf_server_evalute_result);
 
     // TODO slow hash
 
     // Decrypt (a, B) with rw
-    let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(rw).unwrap());
+    let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(oprf_output).unwrap());
 
     // Compute KeyHidingAKE
-    let k1 = tripledh::compute_client(envelope.B, auth_response.Y, envelope.a, x);
+    let client_pre_key = tripledh::compute_client(envelope.pub_b, auth_response.pub_y, envelope.priv_a, priv_x);
 
     // Compute tag t1
-    let t1 = Some(prf::hmac(&k1, b"1"));
+    let client_verify_tag = Some(prf::hmac(&client_pre_key, b"1"));
 
     // Return k1, t1 and X
     (AuthVerifyRequest {
-        t1,
-        X,
-    }, k1)
+        client_verify_tag,
+        pub_x,
+    }, client_pre_key)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthVerifyRequest {
-    t1: VerifyTag,
-    X: PublicKey,
+    client_verify_tag: VerifyTag,
+    pub_x: PublicKey,
 }
 
 /// Return AuthVerifyResponse (t2) and OutputKey (K2)
 pub fn server_auth_finish(auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file_entry: &FileEntry) -> (AuthVerifyResponse, OutputKey) {
     // Retrieve (b, A) from file
-    let b = file_entry.b.clone();
-    let A = file_entry.A.clone();
+    let priv_b = file_entry.priv_b.clone();
+    let pub_a = file_entry.pub_a.clone();
 
     // Compute KeyHidingAKE
-    let k2 = tripledh::compute_server(A, auth_verify_request.X, b, ephemeral_keys.private);
+    let server_pre_key = tripledh::compute_server(pub_a, auth_verify_request.pub_x, priv_b, ephemeral_keys.private);
 
     // Verify tag t1 and compute tag t2 and output key
-    let (t2, K2) = match auth_verify_request.t1 == Some(prf::hmac(&k2, b"1")) { // TODO ok if none ?
+    let (server_verify_tag, server_output_key) = match auth_verify_request.client_verify_tag == Some(prf::hmac(&server_pre_key, b"1")) { // TODO ok if none ?
         true => (
-            Some(prf::hmac(&k2, b"2")),
-            Some(prf::hmac(&k2, b"0"))
+            Some(prf::hmac(&server_pre_key, b"2")),
+            Some(prf::hmac(&server_pre_key, b"0"))
         ),
         false => (None, None),
     };
 
     // Return K2, t2 % TODO what to do with K2 (session key) ? Store in db ? Expiration ? use a session_file[sid] <- K
     (AuthVerifyResponse {
-        t2,
-    }, K2)
+        server_verify_tag,
+    }, server_output_key)
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthVerifyResponse {
-    t2: VerifyTag,
+    server_verify_tag: VerifyTag,
 }
 
 /// Return OutputKey (K1)
-pub fn client_auth_finish(auth_verify_response: AuthVerifyResponse, k1: PreKey) -> OutputKey {
+pub fn client_auth_finish(auth_verify_response: AuthVerifyResponse, client_pre_key: PreKey) -> OutputKey {
     // Verify tag t2 and compute output key
-    match auth_verify_response.t2 == Some(prf::hmac(&k1, b"2")) { // TODO ok if none ?
-        true => Some(prf::hmac(&k1, b"0")),
+    match auth_verify_response.server_verify_tag == Some(prf::hmac(&client_pre_key, b"2")) { // TODO ok if none ?
+        true => Some(prf::hmac(&client_pre_key, b"0")),
         false => None,
     }
 }

@@ -3,7 +3,6 @@ use curve25519_dalek::montgomery::{elligator_decode, elligator_encode};
 use curve25519_dalek::constants::X25519_BASEPOINT;
 use rand::{thread_rng, Rng};
 use crate::khape::{PublicKey, PrivateKey, RawPublicKey, SharedKey};
-use curve25519_dalek::field::FieldElement;
 
 const SIGN: u8 = 0; // TODO elligator sign
 
