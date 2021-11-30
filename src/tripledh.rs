@@ -34,15 +34,15 @@ mod tests {
     #[test]
     fn test_tripledh() {
         // Client
-        let (a, A) = generate_keys();
-        let (x, X) = generate_keys();
+        let (priv_a, pub_a) = generate_keys();
+        let (priv_x, pub_x) = generate_keys();
 
         // Server
-        let (b, B) = generate_keys();
-        let (y, Y) = generate_keys();
+        let (priv_b, pub_b) = generate_keys();
+        let (priv_y, pub_y) = generate_keys();
 
-        let k1 = compute_client(B, Y, a, x);
-        let k2 = compute_server(A, X, b, y);
+        let k1 = compute_client(pub_b, pub_y, priv_a, priv_x);
+        let k2 = compute_server(pub_a, pub_x, priv_b, priv_y);
 
         assert_eq!(k1, k2);
     }

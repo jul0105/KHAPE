@@ -346,23 +346,23 @@ mod tests {
         let (auth_request, oprf_client_state) = client_auth_start(uid, password);
         let (auth_response, server_ephemeral_keys) = server_auth_start(auth_request, &file_entry);
         let (auth_verify_request, k1) = client_auth_ke(auth_response, oprf_client_state);
-        let (auth_verify_response, K2) = server_auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
-        let K1 = client_auth_finish(auth_verify_response, k1);
+        let (auth_verify_response, server_output_key) = server_auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
+        let client_output_key = client_auth_finish(auth_verify_response, k1);
 
-        println!("K1 : {:?}", K1);
-        println!("K2 : {:?}", K2);
+        println!("K1 : {:?}", client_output_key);
+        println!("K2 : {:?}", server_output_key);
 
-        assert!(K1.is_some());
-        assert_eq!(K1, K2);
+        assert!(client_output_key.is_some());
+        assert_eq!(client_output_key, server_output_key);
     }
 
     fn auth(uid: &str, password: &[u8], file_entry: FileEntry) -> (OutputKey, OutputKey) {
         let (auth_request, oprf_client_state) = client_auth_start(uid, password);
         let (auth_response, server_ephemeral_keys) = server_auth_start(auth_request, &file_entry);
         let (auth_verify_request, k1) = client_auth_ke(auth_response, oprf_client_state);
-        let (auth_verify_response, K2) = server_auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
-        let K1 = client_auth_finish(auth_verify_response, k1);
-        (K1, K2)
+        let (auth_verify_response, server_output_key) = server_auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
+        let client_output_key = client_auth_finish(auth_verify_response, k1);
+        (client_output_key, server_output_key)
     }
 
     #[test]
@@ -371,10 +371,10 @@ mod tests {
         let password = b"test";
 
         let file_entry = register(uid, password);
-        let (K1, K2) = auth(uid, password, file_entry);
+        let (client_output_key, server_output_key) = auth(uid, password, file_entry);
 
-        assert!(K1.is_some());
-        assert_eq!(K1, K2);
+        assert!(client_output_key.is_some());
+        assert_eq!(client_output_key, server_output_key);
     }
 
     #[test]
@@ -384,10 +384,10 @@ mod tests {
         let password_auth = b"testt";
 
         let file_entry = register(uid, password_register);
-        let (K1, K2) = auth(uid, password_auth, file_entry);
+        let (client_output_key, server_output_key) = auth(uid, password_auth, file_entry);
 
-        assert!(K1.is_none());
-        assert!(K2.is_none());
-        assert_eq!(K1, K2);
+        assert!(client_output_key.is_none());
+        assert!(server_output_key.is_none());
+        assert_eq!(client_output_key, server_output_key);
     }
 }
