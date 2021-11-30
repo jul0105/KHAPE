@@ -6,7 +6,7 @@ const PART_SIZE: usize = INPUT_SIZE/2;
 const NB_FEISTEL_ROUND: usize = 14;
 
 
-pub fn encrypt_feistel(key: [u8; 32], plaintext: [u8; INPUT_SIZE]) -> [u8; INPUT_SIZE] {
+pub(crate) fn encrypt_feistel(key: [u8; 32], plaintext: [u8; INPUT_SIZE]) -> [u8; INPUT_SIZE] {
     // Split plaintext in 2 equal part L0 and R0
     let mut left_part: [u8; 32] = <[u8; 32]>::try_from(&plaintext[0..32]).unwrap();
     let mut right_part: [u8; 32] = <[u8; 32]>::try_from(&plaintext[32..64]).unwrap();
@@ -24,7 +24,7 @@ pub fn encrypt_feistel(key: [u8; 32], plaintext: [u8; INPUT_SIZE]) -> [u8; INPUT
     <[u8; 64]>::try_from([left_part, right_part].concat()).unwrap()
 }
 
-pub fn decrypt_feistel(key: [u8; 32], ciphertext: [u8; INPUT_SIZE]) -> [u8; INPUT_SIZE] {
+pub(crate) fn decrypt_feistel(key: [u8; 32], ciphertext: [u8; INPUT_SIZE]) -> [u8; INPUT_SIZE] {
     // Split plaintext in 2 equal part Ln+1 and Rn+1
     let mut right_part: [u8; 32] = <[u8; 32]>::try_from(&ciphertext[0..32]).unwrap();
     let mut left_part: [u8; 32] = <[u8; 32]>::try_from(&ciphertext[32..64]).unwrap();

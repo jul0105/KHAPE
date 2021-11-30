@@ -1,6 +1,6 @@
 use sha3::{Sha3_256, Digest};
 
-pub fn hash(data: &[u8]) -> [u8; 32] { // TODO use or remove
+pub(crate) fn hash(data: &[u8]) -> [u8; 32] { // TODO use or remove
     <[u8; 32]>::from(Sha3_256::digest(data)) // TODO hardcoded [u8; 32] for sha256
 }
 

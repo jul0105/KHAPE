@@ -3,7 +3,7 @@ use hmac::{Hmac, Mac, NewMac};
 
 type HmacSha256 = Hmac<Sha3_256>;
 
-pub fn hmac(key: &[u8], data: &[u8]) -> [u8; 32] {
+pub(crate) fn hmac(key: &[u8], data: &[u8]) -> [u8; 32] {
     // Create HMAC-SHA256 instance which implements `Mac` trait
     let mut mac = HmacSha256::new_from_slice(key)
         .expect("HMAC can take key of any size");

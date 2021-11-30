@@ -10,7 +10,7 @@ fn compute_public_key(private_key: PrivateKey) -> RawPublicKey {
     X25519_BASEPOINT * private_key
 }
 
-pub fn compute_shared_key(own_private_key: PrivateKey, opposing_public_key: PublicKey) -> SharedKey {
+pub(crate) fn compute_shared_key(own_private_key: PrivateKey, opposing_public_key: PublicKey) -> SharedKey {
     own_private_key * encode_public_key(&opposing_public_key)
 }
 
@@ -23,7 +23,7 @@ fn generate_private_key() -> PrivateKey {
     }
 }
 
-pub fn generate_keys() -> (PrivateKey, PublicKey) {
+pub(crate) fn generate_keys() -> (PrivateKey, PublicKey) {
     loop {
         let private_key = generate_private_key();
         let public_key = compute_public_key(private_key);

@@ -3,11 +3,11 @@ use rand::rngs::OsRng;
 use voprf::{NonVerifiableClient, NonVerifiableServer, BlindedElement, EvaluationElement};
 use crate::khape::{Group, Hash};
 
-pub fn generate_secret() -> [u8; 32] {
+pub(crate) fn generate_secret() -> [u8; 32] {
     thread_rng().gen()
 }
 
-pub fn client_init(password: &[u8]) -> (NonVerifiableClient<Group, Hash>, Vec<u8>) {
+pub(crate) fn client_init(password: &[u8]) -> (NonVerifiableClient<Group, Hash>, Vec<u8>) {
     let mut client_rng = OsRng;
 
     let result = NonVerifiableClient::<Group, Hash>::blind(
@@ -18,7 +18,7 @@ pub fn client_init(password: &[u8]) -> (NonVerifiableClient<Group, Hash>, Vec<u8
     (result.state, result.message.serialize())
 }
 
-pub fn server_evaluate(client_blind_result: Vec<u8>, secret_salt: [u8; 32]) -> Vec<u8> {
+pub(crate) fn server_evaluate(client_blind_result: Vec<u8>, secret_salt: [u8; 32]) -> Vec<u8> {
     let server = NonVerifiableServer::<Group, Hash>::new_with_key(&secret_salt)
         .expect("Unable to construct server");
 
@@ -28,7 +28,7 @@ pub fn server_evaluate(client_blind_result: Vec<u8>, secret_salt: [u8; 32]) -> V
     ).expect("Unable to perform server evaluate").message.serialize()
 }
 
-pub fn client_finish(client_state: NonVerifiableClient<Group, Hash>, server_evaluate_result: Vec<u8>) -> Vec<u8> {
+pub(crate) fn client_finish(client_state: NonVerifiableClient<Group, Hash>, server_evaluate_result: Vec<u8>) -> Vec<u8> {
     client_state.finalize(
         EvaluationElement::<Group, Hash>::deserialize(&server_evaluate_result).unwrap(), // TODO unwrap
         None,
@@ -40,7 +40,7 @@ mod tests {
     use super::*;
 
     #[test]
-    pub fn try_oprf_fn() {
+    fn try_oprf_fn() {
         let password = b"input";
 
         // Client

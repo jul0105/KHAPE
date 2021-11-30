@@ -5,20 +5,20 @@ use std::convert::TryFrom;
 use crate::ideal_cipher::{encrypt_feistel, decrypt_feistel};
 use serde_big_array::BigArray;
 
-pub struct Envelope {
-    pub priv_a: PrivateKey,
-    pub pub_b: PublicKey,
+pub(crate) struct Envelope {
+    pub(crate) priv_a: PrivateKey,
+    pub(crate) pub_b: PublicKey,
 }
 
 // Serialize (sends, store)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct EncryptedEnvelope {
     #[serde(with = "BigArray")]
-    pub ciphertext: [u8; 64],
+    ciphertext: [u8; 64],
 }
 
 impl Envelope {
-    pub fn encrypt(&self, key: [u8; 32]) -> EncryptedEnvelope {
+    pub(crate) fn encrypt(&self, key: [u8; 32]) -> EncryptedEnvelope {
         let plaintext = <[u8; 64]>::try_from([self.priv_a.to_bytes(), self.pub_b.to_bytes()].concat()).unwrap();
         let ciphertext = encrypt_feistel(key, plaintext);
 
@@ -29,7 +29,7 @@ impl Envelope {
 }
 
 impl EncryptedEnvelope {
-    pub fn decrypt(&self, key: [u8; 32]) -> Envelope {
+    pub(crate) fn decrypt(&self, key: [u8; 32]) -> Envelope {
         let plaintext = decrypt_feistel(key, self.ciphertext);
         let left_part: [u8; 32] = <[u8; 32]>::try_from(&plaintext[0..32]).unwrap();
         let right_part: [u8; 32] = <[u8; 32]>::try_from(&plaintext[32..64]).unwrap();
