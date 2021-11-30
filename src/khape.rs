@@ -112,6 +112,8 @@ pub fn client_register_finish(register_response: RegisterResponse, oprf_client_s
     // Compute OPRF output
     let rw = oprf::client_finish(oprf_client_state, register_response.oprf_server_evalute_result);
 
+    // TODO slow hash ?
+
     // Encrypt (a, B) with rw
     let envelope = Envelope {
         a,
@@ -213,7 +215,9 @@ pub fn client_auth_ke(auth_response: AuthResponse, oprf_client_state: OprfClient
     // Compute OPRF output
     let rw = oprf::client_finish(oprf_client_state, auth_response.oprf_server_evalute_result);
 
-    // decrypt (a, B) with rw
+    // TODO slow hash
+
+    // Decrypt (a, B) with rw
     let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(rw).unwrap());
 
     // Compute KeyHidingAKE
