@@ -14,11 +14,13 @@ pub(crate) fn compute_shared_key(own_private_key: PrivateKey, opposing_public_ke
     own_private_key * encode_public_key(&opposing_public_key)
 }
 
+/// Randomly generate a private key using the rejection method
+/// If the value generated doesn't fit. Generate a new random value and test it again.
 fn generate_private_key() -> PrivateKey {
     loop {
-        let private_key_candidate = Scalar::from_canonical_bytes(thread_rng().gen::<[u8; 32]>());
-        if private_key_candidate.is_some() {
-            return private_key_candidate.unwrap();
+        let private_key_candidate = Scalar::from_bits(thread_rng().gen::<[u8; 32]>());
+        if private_key_candidate == private_key_candidate.reduce() {
+            return private_key_candidate;
         }
     }
 }
@@ -67,5 +69,43 @@ mod tests {
                 println!("try {}", i);
             }
         }
+    }
+
+    #[test]
+    fn bench_generate_private_key() {
+        let mut sum = 0;
+        for _ in 0..100 {
+            let mut i = 0;
+            loop {
+                let private_key_candidate = Scalar::from_canonical_bytes(thread_rng().gen::<[u8; 32]>());
+                if private_key_candidate.is_some() {
+                    println!("succes after {} tries", i);
+                    break;
+                }
+                i += 1;
+            }
+            sum += i;
+        }
+
+        println!("Average {}", (sum as f32)/100f32)
+    }
+
+    #[test]
+    fn bench_generate_private_key_2() {
+        let mut sum = 0;
+        for _ in 0..100 {
+            let mut i = 0;
+            loop {
+                let private_key_candidate = Scalar::from_bits(thread_rng().gen::<[u8; 32]>());
+                if private_key_candidate == private_key_candidate.reduce() {
+                    println!("succes after {} tries", i);
+                    break;
+                }
+                i += 1;
+            }
+            sum += i;
+        }
+
+        println!("Average {}", (sum as f32)/100f32)
     }
 }
