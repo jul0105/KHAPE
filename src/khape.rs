@@ -25,19 +25,43 @@ pub struct Parameters {
     pub use_slow_hash: bool,
 }
 
-pub struct Client(pub Parameters);
-pub struct Server(pub Parameters);
+pub struct Client{
+    pub parameters: Parameters,
+    pub uid: String,
+}
+pub struct Server{
+    pub parameters: Parameters
+}
+
+// Client constructor
+impl Client {
+    pub fn new(parameters: Parameters, uid: String) -> Self {
+        Self {
+            parameters,
+            uid
+        }
+    }
+}
+
+// Server constructor
+impl Server {
+    pub fn new(parameters: Parameters) -> Self {
+        Self {
+            parameters
+        }
+    }
+}
 
 // Client register
 impl Client {
     /// Return RegisterRequest and oprf_client_state
-    pub fn register_start(&self, uid: &str, password: &[u8]) -> (RegisterRequest, OprfClientState) {
+    pub fn register_start(&self, password: &[u8]) -> (RegisterRequest, OprfClientState) {
         // Compute OPRF initialization
         let (client_state, client_blind_result) = oprf::client_init(password);
 
         // Add OPRF client blind and uid to a struct
         (RegisterRequest {
-            uid: String::from(uid),
+            uid: String::from(&self.uid),
             oprf_client_blind_result: client_blind_result,
         }, client_state)
     }
@@ -61,6 +85,7 @@ impl Client {
 
         // Return ciphertext
         RegisterFinish {
+            uid: String::from(&self.uid),
             encrypted_envelope,
             pub_a,
         }
@@ -70,13 +95,13 @@ impl Client {
 // Client login
 impl Client {
     /// Return AuthRequest (uid and oprf_client_blind_result) and oprf_client_state
-    pub fn auth_start(&self, uid: &str, password: &[u8]) -> (AuthRequest, OprfClientState) { // TODO similar to client_register_start
+    pub fn auth_start(&self, password: &[u8]) -> (AuthRequest, OprfClientState) { // TODO similar to client_register_start
         // Compute OPRF initialization
         let (client_state, client_blind_result) = oprf::client_init(password);
 
         // Add OPRF client blind and uid to a struct
         (AuthRequest {
-            uid: String::from(uid),
+            uid: String::from(&self.uid),
             oprf_client_blind_result: client_blind_result,
         }, client_state)
     }
@@ -102,6 +127,7 @@ impl Client {
 
         // Return k1, t1 and X
         (AuthVerifyRequest {
+            uid: String::from(&self.uid),
             client_verify_tag,
             pub_x,
         }, client_pre_key)
@@ -225,6 +251,7 @@ pub struct RegisterResponse {
 // Serialize (send)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterFinish {
+    uid: String,
     encrypted_envelope: EncryptedEnvelope,
     pub_a: PublicKey
 }
@@ -283,6 +310,7 @@ pub struct AuthResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthVerifyRequest {
+    uid: String,
     client_verify_tag: VerifyTag,
     pub_x: PublicKey,
 }
@@ -309,18 +337,18 @@ mod tests {
 
     #[test]
     fn test_register_with_serialization() {
+        let uid = "1234";
+        let password = b"test";
+
         let param = Parameters {
             use_oprf: true,
             use_slow_hash: false
         };
-        let client = Client(param);
-        let server = Server(param);
-
-        let uid = "1234";
-        let password = b"test";
+        let client = Client::new(param, String::from(uid));
+        let server = Server::new(param);
 
 
-        let (register_request, oprf_client_state) = client.register_start(uid, password);
+        let (register_request, oprf_client_state) = client.register_start(password);
 
         let register_request_serialized = serde_json::to_string(&register_request).unwrap();
         println!("Sending register request : {:?}", register_request_serialized);
@@ -342,20 +370,20 @@ mod tests {
     }
 
     fn register(param: Parameters, uid: &str, password: &[u8]) -> FileEntry {
-        let client = Client(param);
-        let server = Server(param);
+        let client = Client::new(param, String::from(uid));
+        let server = Server::new(param);
 
-        let (register_request, oprf_client_state) = client.register_start(uid, password);
+        let (register_request, oprf_client_state) = client.register_start(password);
         let (register_response, pre_register_secrets) = server.register_start(register_request);
         let register_finish = client.register_finish(register_response, oprf_client_state);
         server.register_finish(register_finish, pre_register_secrets)
     }
 
     fn auth(param: Parameters, uid: &str, password: &[u8], file_entry: FileEntry) -> (OutputKey, OutputKey) {
-        let client = Client(param);
-        let server = Server(param);
+        let client = Client::new(param, String::from(uid));
+        let server = Server::new(param);
 
-        let (auth_request, oprf_client_state) = client.auth_start(uid, password);
+        let (auth_request, oprf_client_state) = client.auth_start(password);
         let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
         let (auth_verify_request, k1) = client.auth_ke(auth_response, oprf_client_state);
         let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
