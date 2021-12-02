@@ -4,12 +4,15 @@ use hkdf::Hkdf;
 use sha3::{Digest, Sha3_256};
 
 use crate::alias::{OutputKey, VerifyTag};
+use crate::ideal_cipher::KEY_SIZE;
 
 static STR_CLIENT_MAC: &[u8] = b"ClientMAC";
 static STR_HANDSHAKE_SECRET: &[u8] = b"HandshakeSecret";
 static STR_SERVER_MAC: &[u8] = b"ServerMAC";
 static STR_SESSION_KEY: &[u8] = b"SessionKey";
 static STR_KHAPE: &[u8] = b"KHAPE-";
+const STR_ENCRYPTION_KEY: &[u8; 13] = b"EncryptionKey";
+const STR_EXPORT_KEY: &[u8; 9] = b"ExportKey";
 
 type HkdfSha256 = Hkdf<Sha3_256>;
 
@@ -37,6 +40,7 @@ fn compute_hkdf(hkdf: &HkdfSha256, label: &[u8], context: &[u8]) -> Vec<u8> {
     okm
 }
 
+// Follow OPAQUE-ke
 pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> KeyExchangeOutput {
     let hkdf = HkdfSha256::new(None, &secret);
     let output_key = compute_hkdf(&hkdf, STR_SESSION_KEY, context);
@@ -53,12 +57,21 @@ pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> KeyEx
     }
 }
 
-pub(crate) fn slow_hash(content: Vec<u8>) -> Vec<u8> {
-    Sha3_256::digest(&content).to_vec() // TODO implement argon2
+// Follow OPAQUE-ke
+pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8>) -> Vec<u8> {
+    let mut encryption_key = vec![0u8; KEY_SIZE];
+
+    let hkdf = HkdfSha256::new(
+        None,
+        &[oprf_output, hardened_output].concat()
+    );
+
+    hkdf.expand(STR_ENCRYPTION_KEY, &mut encryption_key);
+    encryption_key
 }
 
-pub(crate) fn hkdf_envelope_key(content: Vec<u8>, content2: Vec<u8>) -> Vec<u8> {
-    Sha3_256::digest(&[content, content2].concat()).to_vec() // TODO implement hkdf (see OPAQUE)
+pub(crate) fn slow_hash(content: Vec<u8>) -> Vec<u8> {
+    Sha3_256::digest(&content).to_vec() // TODO implement argon2
 }
 
 

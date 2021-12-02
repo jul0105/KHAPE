@@ -1,6 +1,7 @@
 use sha3::{Sha3_256, Digest};
 use std::convert::TryFrom;
 
+pub const KEY_SIZE: usize = 32;
 const INPUT_SIZE: usize = 64;
 const PART_SIZE: usize = INPUT_SIZE/2;
 const NB_FEISTEL_ROUND: usize = 14;

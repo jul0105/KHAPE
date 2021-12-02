@@ -74,7 +74,7 @@ impl Client {
         };
 
         // Compute encryption key
-        let encryption_key = key_derivation::hkdf_envelope_key(oprf_output, hardened_output);
+        let encryption_key = key_derivation::compute_envelope_key(oprf_output, hardened_output);
 
         // Encrypt (a, B) with rw
         let envelope = Envelope {
@@ -121,7 +121,7 @@ impl Client {
         };
 
         // Compute encryption key
-        let encryption_key = key_derivation::hkdf_envelope_key(oprf_output, hardened_output);
+        let encryption_key = key_derivation::compute_envelope_key(oprf_output, hardened_output);
 
         // Decrypt (a, B) with rw
         let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(encryption_key).unwrap());
