@@ -11,7 +11,7 @@ use crate::oprf::ClientState;
 use crate::prf;
 use crate::tripledh;
 use crate::key_derivation;
-use crate::tripledh::KeyExchangeOutput;
+use crate::key_derivation::KeyExchangeOutput;
 
 #[derive(Clone, Copy)]
 pub struct Parameters {

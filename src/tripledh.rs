@@ -1,18 +1,12 @@
 use std::convert::TryFrom;
 
+use hkdf::Hkdf;
 use sha3::{Digest, Sha3_256};
 
-use crate::alias::{PrivateKey, PublicKey, OutputKey, VerifyTag};
+use crate::alias::{OutputKey, PrivateKey, PublicKey, VerifyTag};
 use crate::group::compute_shared_key;
 use crate::key_derivation;
-use hkdf::Hkdf;
-
-#[derive(Debug, PartialEq)]
-pub struct KeyExchangeOutput {
-    pub(crate) output_key: OutputKey,
-    pub(crate) client_verify_tag: VerifyTag,
-    pub(crate) server_verify_tag: VerifyTag
-}
+use crate::key_derivation::KeyExchangeOutput;
 
 pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: PrivateKey, priv_x: PrivateKey) -> KeyExchangeOutput {
     // B^x || Y^a || Y^x

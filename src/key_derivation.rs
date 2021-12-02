@@ -1,7 +1,9 @@
-use sha3::{Sha3_256, Digest};
-use hkdf::Hkdf;
 use std::convert::TryFrom;
-use crate::tripledh::KeyExchangeOutput;
+
+use hkdf::Hkdf;
+use sha3::{Digest, Sha3_256};
+
+use crate::alias::{OutputKey, VerifyTag};
 
 static STR_CLIENT_MAC: &[u8] = b"ClientMAC";
 static STR_HANDSHAKE_SECRET: &[u8] = b"HandshakeSecret";
@@ -10,6 +12,14 @@ static STR_SESSION_KEY: &[u8] = b"SessionKey";
 static STR_KHAPE: &[u8] = b"KHAPE-";
 
 type HkdfSha256 = Hkdf<Sha3_256>;
+
+
+#[derive(Debug, PartialEq)]
+pub struct KeyExchangeOutput {
+    pub(crate) output_key: OutputKey,
+    pub(crate) client_verify_tag: VerifyTag,
+    pub(crate) server_verify_tag: VerifyTag
+}
 
 
 fn compute_hkdf(hkdf: &HkdfSha256, label: &[u8], context: &[u8]) -> Vec<u8> {
