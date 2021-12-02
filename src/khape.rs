@@ -8,7 +8,6 @@ use crate::group;
 use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, EphemeralKeys, FileEntry, PreRegisterSecrets, RegisterFinish, RegisterRequest, RegisterResponse};
 use crate::oprf;
 use crate::oprf::ClientState;
-use crate::prf;
 use crate::tripledh;
 use crate::key_derivation;
 use crate::key_derivation::KeyExchangeOutput;

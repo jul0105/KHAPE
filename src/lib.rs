@@ -4,7 +4,6 @@ mod group;
 mod tripledh;
 mod encryption;
 mod key_derivation;
-mod prf;
 mod ideal_cipher;
 mod message;
 mod alias;
