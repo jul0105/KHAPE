@@ -10,6 +10,7 @@ use crate::oprf;
 use crate::oprf::ClientState;
 use crate::prf;
 use crate::tripledh;
+use crate::hash;
 
 #[derive(Clone, Copy)]
 pub struct Parameters {
@@ -66,15 +67,21 @@ impl Client {
         // Compute OPRF output
         let oprf_output = oprf::client_finish(self.parameters.use_oprf, client_state, register_response.oprf_server_evalute_result);
 
-        // TODO slow hash ?
-        // TODO hkdf ?
+        // Compute slow hash
+        let hardened_output = match self.parameters.use_slow_hash {
+            true => hash::slow_hash(oprf_output.clone()), // TODO slow hash
+            false => oprf_output.clone(),
+        };
+
+        // Compute encryption key
+        let encryption_key = hash::hkdf_envelope_key(oprf_output, hardened_output);
 
         // Encrypt (a, B) with rw
         let envelope = Envelope {
             priv_a,
             pub_b: register_response.pub_b
         };
-        let encrypted_envelope = envelope.encrypt(<[u8; 32]>::try_from(oprf_output).unwrap());
+        let encrypted_envelope = envelope.encrypt(<[u8; 32]>::try_from(encryption_key).unwrap());
 
         // Return ciphertext
         RegisterFinish {
@@ -107,12 +114,17 @@ impl Client {
         // Compute OPRF output
         let oprf_output = oprf::client_finish(self.parameters.use_oprf, client_state, auth_response.oprf_server_evalute_result);
 
+        // Compute slow hash
+        let hardened_output = match self.parameters.use_slow_hash {
+            true => hash::slow_hash(oprf_output.clone()), // TODO slow hash
+            false => oprf_output.clone(),
+        };
 
-        // TODO slow hash ?
-        // TODO hkdf ?
+        // Compute encryption key
+        let encryption_key = hash::hkdf_envelope_key(oprf_output, hardened_output);
 
         // Decrypt (a, B) with rw
-        let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(oprf_output).unwrap());
+        let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(encryption_key).unwrap());
 
         // Compute KeyHidingAKE
         let client_pre_key = tripledh::compute_client(envelope.pub_b, auth_response.pub_y, envelope.priv_a, priv_x);
