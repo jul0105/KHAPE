@@ -7,11 +7,11 @@ pub(crate) fn hash(data: &[u8]) -> [u8; 32] { // TODO use or remove
 }
 
 pub(crate) fn slow_hash(content: Vec<u8>) -> Vec<u8> {
-    unimplemented!();
+    Sha3_256::digest(&content).to_vec() // TODO implement argon2
 }
 
 pub(crate) fn hkdf_envelope_key(content: Vec<u8>, content2: Vec<u8>) -> Vec<u8> {
-    unimplemented!();
+    Sha3_256::digest(&[content, content2].concat()).to_vec() // TODO implement hkdf (see OPAQUE)
 }
 
 static STR_CLIENT_MAC: &[u8] = b"ClientMAC";
