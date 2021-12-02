@@ -7,7 +7,14 @@ use crate::group::compute_shared_key;
 use crate::hash;
 use hkdf::Hkdf;
 
-pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: PrivateKey, priv_x: PrivateKey) -> [u8; 32] {
+#[derive(Debug, PartialEq)]
+pub struct KeyExchangeOutput {
+    pub(crate) output_key: OutputKey,
+    pub(crate) client_verify_tag: VerifyTag,
+    pub(crate) server_verify_tag: VerifyTag
+}
+
+pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: PrivateKey, priv_x: PrivateKey) -> KeyExchangeOutput {
     // B^x || Y^a || Y^x
     let o_client = [
         compute_shared_key(priv_x, pub_b).to_bytes(),
@@ -15,10 +22,10 @@ pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: Private
         compute_shared_key(priv_x, pub_y).to_bytes()
     ].concat();
 
-    <[u8; 32]>::try_from(Sha3_256::digest(&o_client).to_vec()).unwrap() // TODO sid, C, S ?
+    hash::compute_output_key_and_tag(&o_client, b"")
 }
 
-pub(crate) fn compute_server(pub_a: PublicKey, pub_x: PublicKey, priv_b: PrivateKey, priv_y: PrivateKey) -> [u8; 32] {
+pub(crate) fn compute_server(pub_a: PublicKey, pub_x: PublicKey, priv_b: PrivateKey, priv_y: PrivateKey) -> KeyExchangeOutput {
     // X^b || A^y || X^y
     let o_server = [
         compute_shared_key(priv_b, pub_x).to_bytes(),
@@ -26,7 +33,7 @@ pub(crate) fn compute_server(pub_a: PublicKey, pub_x: PublicKey, priv_b: Private
         compute_shared_key(priv_y, pub_x).to_bytes()
     ].concat();
 
-    <[u8; 32]>::try_from(Sha3_256::digest(&o_server).to_vec()).unwrap() // TODO sid, C, S ?
+    hash::compute_output_key_and_tag(&o_server, b"")
 }
 
 

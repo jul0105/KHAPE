@@ -1,6 +1,7 @@
 use sha3::{Sha3_256, Digest};
 use hkdf::Hkdf;
 use std::convert::TryFrom;
+use crate::tripledh::KeyExchangeOutput;
 
 pub(crate) fn hash(data: &[u8]) -> [u8; 32] { // TODO use or remove
     <[u8; 32]>::from(Sha3_256::digest(data)) // TODO hardcoded [u8; 32] for sha256
@@ -38,16 +39,20 @@ fn compute_hkdf(hkdf: &HkdfSha256, label: &[u8], context: &[u8]) -> Vec<u8> {
     okm
 }
 
-pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> KeyExchangeOutput {
     let hkdf = HkdfSha256::new(None, &secret);
     let output_key = compute_hkdf(&hkdf, STR_SESSION_KEY, context);
     let handshake_secret = compute_hkdf(&hkdf, STR_HANDSHAKE_SECRET, context);
 
     let handshake_hkdf = HkdfSha256::from_prk(&handshake_secret).unwrap();
-    let verify_tag_client = compute_hkdf(&handshake_hkdf, STR_CLIENT_MAC, b"");
-    let verify_tag_server = compute_hkdf(&handshake_hkdf, STR_SERVER_MAC, b"");
+    let client_verify_tag = compute_hkdf(&handshake_hkdf, STR_CLIENT_MAC, b"");
+    let server_verify_tag = compute_hkdf(&handshake_hkdf, STR_SERVER_MAC, b"");
 
-    (output_key, verify_tag_client, verify_tag_server)
+    KeyExchangeOutput {
+        output_key: <[u8; 32]>::try_from(output_key).unwrap(),
+        client_verify_tag: <[u8; 32]>::try_from(client_verify_tag).unwrap(),
+        server_verify_tag: <[u8; 32]>::try_from(server_verify_tag).unwrap()
+    }
 }
 
 
@@ -63,10 +68,8 @@ mod tests {
 
     #[test]
     fn try_compute_output_key_and_tag() {
-        let (key, t1, t2) = compute_output_key_and_tag(b"daiuwdhawuidhiuwad", b"");
+        let ke_output = compute_output_key_and_tag(b"daiuwdhawuidhiuwad", b"");
 
-        println!("{:?}", key);
-        println!("{:?}", t1);
-        println!("{:?}", t2);
+        println!("{:?}", ke_output);
     }
 }

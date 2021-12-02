@@ -11,6 +11,7 @@ use crate::oprf::ClientState;
 use crate::prf;
 use crate::tripledh;
 use crate::hash;
+use crate::tripledh::KeyExchangeOutput;
 
 #[derive(Clone, Copy)]
 pub struct Parameters {
@@ -107,7 +108,7 @@ impl Client {
     }
 
     /// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
-    pub fn auth_ke(&self, auth_response: AuthResponse, client_state: ClientState) -> (AuthVerifyRequest, PreKey) {
+    pub fn auth_ke(&self, auth_response: AuthResponse, client_state: ClientState) -> (AuthVerifyRequest, KeyExchangeOutput) {
         // Generate asymmetric key
         let (priv_x, pub_x) = group::generate_keys();
 
@@ -127,24 +128,21 @@ impl Client {
         let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(encryption_key).unwrap());
 
         // Compute KeyHidingAKE
-        let client_pre_key = tripledh::compute_client(envelope.pub_b, auth_response.pub_y, envelope.priv_a, priv_x);
-
-        // Compute tag t1
-        let client_verify_tag = Some(prf::hmac(&client_pre_key, b"1"));
+        let ke_output = tripledh::compute_client(envelope.pub_b, auth_response.pub_y, envelope.priv_a, priv_x);
 
         // Return k1, t1 and X
         (AuthVerifyRequest {
             uid: String::from(&self.uid),
-            client_verify_tag,
+            client_verify_tag: ke_output.client_verify_tag,
             pub_x,
-        }, client_pre_key)
+        }, ke_output)
     }
 
     /// Return OutputKey (K1)
-    pub fn auth_finish(&self, auth_verify_response: AuthVerifyResponse, client_pre_key: PreKey) -> OutputKey {
+    pub fn auth_finish(&self, auth_verify_response: AuthVerifyResponse, ke_output: KeyExchangeOutput) -> Option<OutputKey> {
         // Verify tag t2 and compute output key
-        match auth_verify_response.server_verify_tag == Some(prf::hmac(&client_pre_key, b"2")) { // TODO ok if none ?
-            true => Some(prf::hmac(&client_pre_key, b"0")),
+        match auth_verify_response.server_verify_tag == Some(ke_output.server_verify_tag) { // TODO ok if none ?
+            true => Some(ke_output.output_key),
             false => None,
         }
     }
@@ -212,19 +210,19 @@ impl Server {
     }
 
     /// Return AuthVerifyResponse (t2) and OutputKey (K2)
-    pub fn auth_finish(&self, auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file_entry: &FileEntry) -> (AuthVerifyResponse, OutputKey) {
+    pub fn auth_finish(&self, auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file_entry: &FileEntry) -> (AuthVerifyResponse, Option<OutputKey>) {
         // Retrieve (b, A) from file
         let priv_b = file_entry.priv_b.clone();
         let pub_a = file_entry.pub_a.clone();
 
         // Compute KeyHidingAKE
-        let server_pre_key = tripledh::compute_server(pub_a, auth_verify_request.pub_x, priv_b, ephemeral_keys.private);
+        let ke_output = tripledh::compute_server(pub_a, auth_verify_request.pub_x, priv_b, ephemeral_keys.private);
 
         // Verify tag t1 and compute tag t2 and output key
-        let (server_verify_tag, server_output_key) = match auth_verify_request.client_verify_tag == Some(prf::hmac(&server_pre_key, b"1")) { // TODO ok if none ?
+        let (server_verify_tag, server_output_key) = match auth_verify_request.client_verify_tag == ke_output.client_verify_tag {
             true => (
-                Some(prf::hmac(&server_pre_key, b"2")),
-                Some(prf::hmac(&server_pre_key, b"0"))
+                Some(ke_output.server_verify_tag),
+                Some(ke_output.output_key)
             ),
             false => (None, None),
         };
@@ -290,7 +288,7 @@ mod tests {
         server.register_finish(register_finish, pre_register_secrets)
     }
 
-    fn auth(param: Parameters, uid: &str, password: &[u8], file_entry: FileEntry) -> (OutputKey, OutputKey) {
+    fn auth(param: Parameters, uid: &str, password: &[u8], file_entry: FileEntry) -> (Option<OutputKey>, Option<OutputKey>) {
         let client = Client::new(param, String::from(uid));
         let server = Server::new(param);
 

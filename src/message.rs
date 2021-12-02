@@ -56,7 +56,7 @@ pub struct AuthVerifyRequest {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthVerifyResponse {
-    pub(crate) server_verify_tag: VerifyTag,
+    pub(crate) server_verify_tag: Option<VerifyTag>,
 }
 
 
