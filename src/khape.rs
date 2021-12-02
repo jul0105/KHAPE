@@ -52,12 +52,18 @@ impl Server {
     }
 }
 
+#[derive(Clone)]
+pub enum ClientState {
+    WithOPRF(OprfClientState),
+    WithoutOPRF(Vec<u8>),
+}
+
 // Client register
 impl Client {
     /// Return RegisterRequest and oprf_client_state
-    pub fn register_start(&self, password: &[u8]) -> (RegisterRequest, OprfClientState) {
+    pub fn register_start(&self, password: &[u8]) -> (RegisterRequest, ClientState) {
         // Compute OPRF initialization
-        let (client_state, client_blind_result) = oprf::client_init(password);
+        let (client_state, client_blind_result) = oprf::client_init(self.parameters.use_oprf, password);
 
         // Add OPRF client blind and uid to a struct
         (RegisterRequest {
@@ -67,14 +73,15 @@ impl Client {
     }
 
     /// Return RegisterFinish (ciphertext, A)
-    pub fn register_finish(&self, register_response: RegisterResponse, oprf_client_state: OprfClientState) -> RegisterFinish {
+    pub fn register_finish(&self, register_response: RegisterResponse, client_state: ClientState) -> RegisterFinish {
         // Generate asymmetric key
         let (priv_a, pub_a) = group::generate_keys();
 
         // Compute OPRF output
-        let oprf_output = oprf::client_finish(oprf_client_state, register_response.oprf_server_evalute_result);
+        let oprf_output = oprf::client_finish(self.parameters.use_oprf, client_state, register_response.oprf_server_evalute_result);
 
         // TODO slow hash ?
+        // TODO hkdf ?
 
         // Encrypt (a, B) with rw
         let envelope = Envelope {
@@ -95,9 +102,9 @@ impl Client {
 // Client login
 impl Client {
     /// Return AuthRequest (uid and oprf_client_blind_result) and oprf_client_state
-    pub fn auth_start(&self, password: &[u8]) -> (AuthRequest, OprfClientState) { // TODO similar to client_register_start
+    pub fn auth_start(&self, password: &[u8]) -> (AuthRequest, ClientState) { // TODO similar to client_register_start
         // Compute OPRF initialization
-        let (client_state, client_blind_result) = oprf::client_init(password);
+        let (client_state, client_blind_result) = oprf::client_init(self.parameters.use_oprf, password);
 
         // Add OPRF client blind and uid to a struct
         (AuthRequest {
@@ -107,14 +114,16 @@ impl Client {
     }
 
     /// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
-    pub fn auth_ke(&self, auth_response: AuthResponse, oprf_client_state: OprfClientState) -> (AuthVerifyRequest, PreKey) {
+    pub fn auth_ke(&self, auth_response: AuthResponse, client_state: ClientState) -> (AuthVerifyRequest, PreKey) {
         // Generate asymmetric key
         let (priv_x, pub_x) = generate_keys();
 
         // Compute OPRF output
-        let oprf_output = oprf::client_finish(oprf_client_state, auth_response.oprf_server_evalute_result);
+        let oprf_output = oprf::client_finish(self.parameters.use_oprf, client_state, auth_response.oprf_server_evalute_result);
 
-        // TODO slow hash
+
+        // TODO slow hash ?
+        // TODO hkdf ?
 
         // Decrypt (a, B) with rw
         let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(oprf_output).unwrap());
@@ -151,10 +160,10 @@ impl Server {
         let (priv_b, pub_b) = group::generate_keys();
 
         // Generate OPRF salt
-        let secret_salt = oprf::generate_secret();
+        let secret_salt = oprf::generate_secret(self.parameters.use_oprf);
 
         // Compute OPRF server evaluate
-        let server_evaluate_result = oprf::server_evaluate(register_request.oprf_client_blind_result, secret_salt);
+        let server_evaluate_result = oprf::server_evaluate(self.parameters.use_oprf, register_request.oprf_client_blind_result, secret_salt);
 
         // Return B and h2 % TODO how to store salt and b (secret) ? Pre - store b and salt in file[uid] (remove it on server_register_finish) OR use a session_file[sid] < - (b, salt)
         (RegisterResponse {
@@ -190,7 +199,7 @@ impl Server {
         let encrypted_envelope = file_entry.encrypted_envelope.clone();
 
         // Compute OPRF server evaluate
-        let server_evaluate_result = oprf::server_evaluate(auth_request.oprf_client_blind_result, secret_salt);
+        let server_evaluate_result = oprf::server_evaluate(self.parameters.use_oprf, auth_request.oprf_client_blind_result, secret_salt);
 
         // Return e, Y, y, h2 % TODO how to store y ? Store in file[uid] (remove it on server_auth_finish) OR use a session_file[sid] <- (y)
         (AuthResponse {
@@ -238,14 +247,14 @@ impl Server {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterRequest {
     uid: String,
-    oprf_client_blind_result: Vec<u8>,
+    oprf_client_blind_result: Option<Vec<u8>>,
 }
 
 // Serialize (send)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct RegisterResponse {
     pub_b: PublicKey,
-    oprf_server_evalute_result: Vec<u8>,
+    oprf_server_evalute_result: Option<Vec<u8>>,
 }
 
 // Serialize (send)
@@ -262,14 +271,14 @@ pub struct FileEntry {
     pub encrypted_envelope: EncryptedEnvelope,
     pub priv_b: PrivateKey,
     pub pub_a: PublicKey,
-    pub secret_salt: [u8; 32],
+    pub secret_salt: Option<[u8; 32]>,
 }
 
 // Serialize (store)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PreRegisterSecrets {
     private_key: PrivateKey,
-    secret_salt: [u8; 32]
+    secret_salt: Option<[u8; 32]>
 }
 
 
@@ -295,7 +304,7 @@ pub struct EphemeralKeys {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthRequest {
     uid: String,
-    oprf_client_blind_result: Vec<u8>,
+    oprf_client_blind_result: Option<Vec<u8>>,
 }
 
 
@@ -303,7 +312,7 @@ pub struct AuthRequest {
 pub struct AuthResponse {
     encrypted_envelope: EncryptedEnvelope,
     pub_y: PublicKey,
-    oprf_server_evalute_result: Vec<u8>,
+    oprf_server_evalute_result: Option<Vec<u8>>,
 }
 
 
