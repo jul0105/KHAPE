@@ -2,8 +2,10 @@ use std::convert::TryFrom;
 
 use sha3::{Digest, Sha3_256};
 
-use crate::alias::{PrivateKey, PublicKey};
+use crate::alias::{PrivateKey, PublicKey, OutputKey, VerifyTag};
 use crate::group::compute_shared_key;
+use crate::hash;
+use hkdf::Hkdf;
 
 pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: PrivateKey, priv_x: PrivateKey) -> [u8; 32] {
     // B^x || Y^a || Y^x
