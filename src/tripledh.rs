@@ -4,7 +4,7 @@ use sha3::{Digest, Sha3_256};
 
 use crate::alias::{PrivateKey, PublicKey, OutputKey, VerifyTag};
 use crate::group::compute_shared_key;
-use crate::hash;
+use crate::key_derivation;
 use hkdf::Hkdf;
 
 #[derive(Debug, PartialEq)]
@@ -22,7 +22,7 @@ pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: Private
         compute_shared_key(priv_x, pub_y).to_bytes()
     ].concat();
 
-    hash::compute_output_key_and_tag(&o_client, b"")
+    key_derivation::compute_output_key_and_tag(&o_client, b"")
 }
 
 pub(crate) fn compute_server(pub_a: PublicKey, pub_x: PublicKey, priv_b: PrivateKey, priv_y: PrivateKey) -> KeyExchangeOutput {
@@ -33,7 +33,7 @@ pub(crate) fn compute_server(pub_a: PublicKey, pub_x: PublicKey, priv_b: Private
         compute_shared_key(priv_y, pub_x).to_bytes()
     ].concat();
 
-    hash::compute_output_key_and_tag(&o_server, b"")
+    key_derivation::compute_output_key_and_tag(&o_server, b"")
 }
 
 

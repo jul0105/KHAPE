@@ -10,7 +10,7 @@ use crate::oprf;
 use crate::oprf::ClientState;
 use crate::prf;
 use crate::tripledh;
-use crate::hash;
+use crate::key_derivation;
 use crate::tripledh::KeyExchangeOutput;
 
 #[derive(Clone, Copy)]
@@ -70,12 +70,12 @@ impl Client {
 
         // Compute slow hash
         let hardened_output = match self.parameters.use_slow_hash {
-            true => hash::slow_hash(oprf_output.clone()), // TODO slow hash
+            true => key_derivation::slow_hash(oprf_output.clone()), // TODO slow hash
             false => oprf_output.clone(),
         };
 
         // Compute encryption key
-        let encryption_key = hash::hkdf_envelope_key(oprf_output, hardened_output);
+        let encryption_key = key_derivation::hkdf_envelope_key(oprf_output, hardened_output);
 
         // Encrypt (a, B) with rw
         let envelope = Envelope {
@@ -117,12 +117,12 @@ impl Client {
 
         // Compute slow hash
         let hardened_output = match self.parameters.use_slow_hash {
-            true => hash::slow_hash(oprf_output.clone()), // TODO slow hash
+            true => key_derivation::slow_hash(oprf_output.clone()), // TODO slow hash
             false => oprf_output.clone(),
         };
 
         // Compute encryption key
-        let encryption_key = hash::hkdf_envelope_key(oprf_output, hardened_output);
+        let encryption_key = key_derivation::hkdf_envelope_key(oprf_output, hardened_output);
 
         // Decrypt (a, B) with rw
         let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(encryption_key).unwrap());

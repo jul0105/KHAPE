@@ -3,7 +3,7 @@ mod oprf;
 mod group;
 mod tripledh;
 mod encryption;
-mod hash;
+mod key_derivation;
 mod prf;
 mod ideal_cipher;
 mod message;
