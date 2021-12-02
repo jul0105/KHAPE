@@ -6,13 +6,14 @@ mod encryption;
 mod hash;
 mod prf;
 mod ideal_cipher;
+mod message;
+mod alias;
 
-
-// Register messages
-pub use crate::khape::{RegisterRequest, RegisterResponse, RegisterFinish};
-// Login messages
-pub use crate::khape::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse};
-
-pub use crate::khape::{OutputKey, OprfClientState, FileEntry, EphemeralKeys, PreRegisterSecrets};
-
-pub use crate::khape::{Client, Server, Parameters};
+// KHAPE functions
+pub use crate::khape::{Client, Parameters, Server};
+// KHAPE messages
+pub use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, RegisterFinish, RegisterRequest, RegisterResponse};
+// Server struct
+pub use crate::message::{EphemeralKeys, FileEntry, PreRegisterSecrets};
+// Alias
+pub use crate::alias::{OutputKey};

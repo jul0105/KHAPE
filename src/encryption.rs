@@ -1,9 +1,10 @@
-use serde::{Deserialize, Serialize};
-
-use crate::khape::{PublicKey, PrivateKey};
 use std::convert::TryFrom;
-use crate::ideal_cipher::{encrypt_feistel, decrypt_feistel};
+
+use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
+
+use crate::alias::{PrivateKey, PublicKey};
+use crate::ideal_cipher::{decrypt_feistel, encrypt_feistel};
 
 pub(crate) struct Envelope {
     pub(crate) priv_a: PrivateKey,
@@ -43,8 +44,9 @@ impl EncryptedEnvelope {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::group::generate_keys;
+
+    use super::*;
 
     #[test]
     fn test_encrypt_decrypt() {

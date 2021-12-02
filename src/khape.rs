@@ -1,23 +1,15 @@
-use serde::{Deserialize, Serialize};
-
-use crate::encryption::{EncryptedEnvelope, Envelope};
-use crate::group;
-use crate::oprf;
-use crate::group::generate_keys;
-use crate::tripledh;
-use crate::prf;
 use std::convert::TryFrom;
 
-pub(crate) type Group = curve25519_dalek::ristretto::RistrettoPoint;
-pub(crate) type Hash = sha3::Sha3_256;
-pub(crate) type RawPublicKey = curve25519_dalek::montgomery::MontgomeryPoint;
-pub(crate) type SharedKey = curve25519_dalek::montgomery::MontgomeryPoint;
-pub(crate) type PublicKey = curve25519_dalek::field::FieldElement;
-pub(crate) type PrivateKey = curve25519_dalek::scalar::Scalar;
+use serde::{Deserialize, Serialize};
 
-
-pub type OprfClientState = voprf::NonVerifiableClient<Group, Hash>;
-
+use crate::alias::{OprfClientState, OutputKey, PreKey};
+use crate::encryption::{EncryptedEnvelope, Envelope};
+use crate::group;
+use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, EphemeralKeys, FileEntry, PreRegisterSecrets, RegisterFinish, RegisterRequest, RegisterResponse};
+use crate::oprf;
+use crate::oprf::ClientState;
+use crate::prf;
+use crate::tripledh;
 
 #[derive(Clone, Copy)]
 pub struct Parameters {
@@ -50,12 +42,6 @@ impl Server {
             parameters
         }
     }
-}
-
-#[derive(Clone)]
-pub enum ClientState {
-    WithOPRF(OprfClientState),
-    WithoutOPRF(Vec<u8>),
 }
 
 // Client register
@@ -116,7 +102,7 @@ impl Client {
     /// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
     pub fn auth_ke(&self, auth_response: AuthResponse, client_state: ClientState) -> (AuthVerifyRequest, PreKey) {
         // Generate asymmetric key
-        let (priv_x, pub_x) = generate_keys();
+        let (priv_x, pub_x) = group::generate_keys();
 
         // Compute OPRF output
         let oprf_output = oprf::client_finish(self.parameters.use_oprf, client_state, auth_response.oprf_server_evalute_result);
@@ -192,7 +178,7 @@ impl Server {
     /// Return AuthResponse (e, Y, oprf_server_evalute_result) and EphemeralKeys (server Y and y)
     pub fn auth_start(&self, auth_request: AuthRequest, file_entry: &FileEntry) -> (AuthResponse, EphemeralKeys) {
         // Generate asymmetric key
-        let (priv_y, pub_y) = generate_keys();
+        let (priv_y, pub_y) = group::generate_keys();
 
         // Retrieve (e, salt) from file
         let secret_salt = file_entry.secret_salt.clone();
@@ -237,102 +223,6 @@ impl Server {
         }, server_output_key)
     }
 }
-
-
-//////////////////////////////////////////////
-//                  LOGIN                   //
-//////////////////////////////////////////////
-
-// Serialize (send)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct RegisterRequest {
-    uid: String,
-    oprf_client_blind_result: Option<Vec<u8>>,
-}
-
-// Serialize (send)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct RegisterResponse {
-    pub_b: PublicKey,
-    oprf_server_evalute_result: Option<Vec<u8>>,
-}
-
-// Serialize (send)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct RegisterFinish {
-    uid: String,
-    encrypted_envelope: EncryptedEnvelope,
-    pub_a: PublicKey
-}
-
-// Serialize (store)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct FileEntry {
-    pub encrypted_envelope: EncryptedEnvelope,
-    pub priv_b: PrivateKey,
-    pub pub_a: PublicKey,
-    pub secret_salt: Option<[u8; 32]>,
-}
-
-// Serialize (store)
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct PreRegisterSecrets {
-    private_key: PrivateKey,
-    secret_salt: Option<[u8; 32]>
-}
-
-
-
-
-//////////////////////////////////////////////
-//                 REGISTER                 //
-//////////////////////////////////////////////
-
-type PreKey = [u8; 32];
-pub type OutputKey = Option<[u8; 32]>;
-type VerifyTag = OutputKey;
-type FileStorage = Vec<FileEntry>;
-
-
-pub struct EphemeralKeys {
-    private: PrivateKey,
-    public: PublicKey,
-}
-
-
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct AuthRequest {
-    uid: String,
-    oprf_client_blind_result: Option<Vec<u8>>,
-}
-
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct AuthResponse {
-    encrypted_envelope: EncryptedEnvelope,
-    pub_y: PublicKey,
-    oprf_server_evalute_result: Option<Vec<u8>>,
-}
-
-
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct AuthVerifyRequest {
-    uid: String,
-    client_verify_tag: VerifyTag,
-    pub_x: PublicKey,
-}
-
-
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct AuthVerifyResponse {
-    server_verify_tag: VerifyTag,
-}
-
-
-
 
 
 

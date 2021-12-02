@@ -1,7 +1,9 @@
-use crate::group::compute_shared_key;
-use sha3::{Sha3_256, Digest};
-use crate::khape::{PublicKey, PrivateKey};
 use std::convert::TryFrom;
+
+use sha3::{Digest, Sha3_256};
+
+use crate::alias::{PrivateKey, PublicKey};
+use crate::group::compute_shared_key;
 
 pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: PrivateKey, priv_x: PrivateKey) -> [u8; 32] {
     // B^x || Y^a || Y^x
@@ -28,8 +30,9 @@ pub(crate) fn compute_server(pub_a: PublicKey, pub_x: PublicKey, priv_b: Private
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::group::generate_keys;
+
+    use super::*;
 
     #[test]
     fn test_tripledh() {

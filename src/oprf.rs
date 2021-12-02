@@ -1,9 +1,18 @@
-use rand::{thread_rng, Rng};
-use rand::rngs::OsRng;
-use voprf::{NonVerifiableClient, NonVerifiableServer, BlindedElement, EvaluationElement};
-use crate::khape::{Group, Hash, ClientState};
-use sha3::Sha3_256;
 use curve25519_dalek::ristretto::RistrettoPoint;
+use rand::{Rng, thread_rng};
+use rand::rngs::OsRng;
+use sha3::Sha3_256;
+use voprf::{BlindedElement, EvaluationElement, NonVerifiableClient, NonVerifiableServer};
+
+use crate::alias::{Group, Hash};
+use crate::alias::OprfClientState;
+
+#[derive(Clone)]
+pub enum ClientState {
+    WithOPRF(OprfClientState),
+    WithoutOPRF(Vec<u8>),
+}
+
 
 pub(crate) fn generate_secret(use_oprf: bool) -> Option<[u8; 32]> {
     if use_oprf {

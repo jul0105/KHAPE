@@ -1,8 +1,9 @@
-use curve25519_dalek::scalar::Scalar;
-use curve25519_dalek::montgomery::{elligator_decode, elligator_encode};
 use curve25519_dalek::constants::X25519_BASEPOINT;
-use rand::{thread_rng, Rng};
-use crate::khape::{PublicKey, PrivateKey, RawPublicKey, SharedKey};
+use curve25519_dalek::montgomery::{elligator_decode, elligator_encode};
+use curve25519_dalek::scalar::Scalar;
+use rand::{Rng, thread_rng};
+
+use crate::alias::{PrivateKey, PublicKey, RawPublicKey, SharedKey};
 
 const SIGN: u8 = 0; // TODO elligator sign
 
