@@ -7,6 +7,7 @@ mod key_derivation;
 mod ideal_cipher;
 mod message;
 mod alias;
+mod slow_hash;
 
 // KHAPE functions
 pub use crate::khape::{Client, Parameters, Server};

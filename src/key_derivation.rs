@@ -70,10 +70,6 @@ pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8
     encryption_key
 }
 
-pub(crate) fn slow_hash(content: Vec<u8>) -> Vec<u8> {
-    Sha3_256::digest(&content).to_vec() // TODO implement argon2
-}
-
 
 #[cfg(test)]
 mod tests {

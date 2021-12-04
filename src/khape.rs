@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::alias::{OprfClientState, OutputKey, PreKey};
 use crate::encryption::{EncryptedEnvelope, Envelope};
-use crate::group;
+use crate::{group, slow_hash};
 use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, EphemeralKeys, FileEntry, PreRegisterSecrets, RegisterFinish, RegisterRequest, RegisterResponse};
 use crate::oprf;
 use crate::oprf::ClientState;
@@ -69,7 +69,7 @@ impl Client {
 
         // Compute slow hash
         let hardened_output = match self.parameters.use_slow_hash {
-            true => key_derivation::slow_hash(oprf_output.clone()), // TODO slow hash
+            true => slow_hash::hash(&oprf_output),
             false => oprf_output.clone(),
         };
 
@@ -116,7 +116,7 @@ impl Client {
 
         // Compute slow hash
         let hardened_output = match self.parameters.use_slow_hash {
-            true => key_derivation::slow_hash(oprf_output.clone()), // TODO slow hash
+            true => slow_hash::hash(&oprf_output),
             false => oprf_output.clone(),
         };
 
