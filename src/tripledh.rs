@@ -1,9 +1,4 @@
-use std::convert::TryFrom;
-
-use hkdf::Hkdf;
-use sha3::{Digest, Sha3_256};
-
-use crate::alias::{OutputKey, PrivateKey, PublicKey, VerifyTag};
+use crate::alias::{PrivateKey, PublicKey};
 use crate::group::compute_shared_key;
 use crate::key_derivation;
 use crate::key_derivation::KeyExchangeOutput;

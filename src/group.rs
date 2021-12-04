@@ -51,7 +51,7 @@ mod tests {
 
     #[test]
     fn test_generate_key_with_elligator() {
-        let (private_key, public_key_elligator) = generate_keys();
+        let (_, public_key_elligator) = generate_keys();
         let public_key = encode_public_key(&public_key_elligator);
         let public_key_elligator2 = decode_public_key(&public_key).unwrap();
 

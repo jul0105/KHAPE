@@ -1,7 +1,5 @@
-use curve25519_dalek::ristretto::RistrettoPoint;
 use rand::{Rng, thread_rng};
 use rand::rngs::OsRng;
-use sha3::Sha3_256;
 use voprf::{BlindedElement, EvaluationElement, NonVerifiableClient, NonVerifiableServer};
 
 use crate::alias::{Group, Hash};

@@ -1,15 +1,10 @@
 use std::convert::TryFrom;
 
-use serde::{Deserialize, Serialize};
-
-use crate::alias::{OprfClientState, OutputKey, PreKey};
-use crate::encryption::{EncryptedEnvelope, Envelope};
-use crate::{group, slow_hash};
+use crate::{group, slow_hash, oprf, tripledh, key_derivation};
+use crate::alias::OutputKey;
+use crate::encryption::Envelope;
 use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, EphemeralKeys, FileEntry, PreRegisterSecrets, RegisterFinish, RegisterRequest, RegisterResponse};
-use crate::oprf;
 use crate::oprf::ClientState;
-use crate::tripledh;
-use crate::key_derivation;
 use crate::key_derivation::KeyExchangeOutput;
 
 #[derive(Clone, Copy)]
@@ -274,7 +269,7 @@ mod tests {
         println!("Sending register finish : {:?}", register_finish_serialized);
         let register_finish_deserialized: RegisterFinish = serde_json::from_str(&register_finish_serialized).unwrap();
 
-        let file_entry = server.register_finish(register_finish_deserialized, pre_register_secrets);
+        server.register_finish(register_finish_deserialized, pre_register_secrets);
     }
 
     fn register(param: Parameters, uid: &str, password: &[u8]) -> FileEntry {
