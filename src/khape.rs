@@ -13,6 +13,22 @@ pub struct Parameters {
     pub use_slow_hash: bool,
 }
 
+impl Parameters {
+    pub fn new(use_oprf: bool, use_slow_hash: bool) -> Self {
+        Parameters {
+            use_oprf,
+            use_slow_hash
+        }
+    }
+
+    pub fn default() -> Self {
+        Parameters {
+            use_oprf: true,
+            use_slow_hash: true
+        }
+    }
+}
+
 pub struct Client{
     pub parameters: Parameters,
     pub uid: String,
@@ -288,9 +304,9 @@ mod tests {
 
         let (auth_request, oprf_client_state) = client.auth_start(password);
         let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
-        let (auth_verify_request, k1) = client.auth_ke(auth_response, oprf_client_state);
+        let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
         let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
-        let client_output_key = client.auth_finish(auth_verify_response, k1);
+        let client_output_key = client.auth_finish(auth_verify_response, ke_output);
         (client_output_key, server_output_key)
     }
 
