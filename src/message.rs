@@ -34,6 +34,7 @@ pub struct RegisterFinish {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthRequest {
     pub uid: String,
+    // pub sid: String, // TODO sid
     pub(crate) oprf_client_blind_result: Option<Vec<u8>>,
 }
 
@@ -49,6 +50,7 @@ pub struct AuthResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct AuthVerifyRequest {
     pub uid: String,
+    // pub sid: String, // TODO sid
     pub(crate) client_verify_tag: VerifyTag,
     pub(crate) pub_x: PublicKey,
 }
