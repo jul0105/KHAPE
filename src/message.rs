@@ -82,6 +82,8 @@ pub struct PreRegisterSecrets {
     pub(crate) secret_salt: Option<[u8; 32]>
 }
 
+// Serialize (store)
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct EphemeralKeys {
     pub(crate) private: PrivateKey,
     pub(crate) public: PublicKey,
