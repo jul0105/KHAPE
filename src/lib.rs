@@ -1,7 +1,7 @@
 //! # Usage
 //!
 //! ## Parameters
-//!
+//! Client and server has to agree on the protocol parameters. Default parameters include OPRF and a memory-hard hash computation.
 //! ```
 //! use khape::Parameters;
 //! let params = Parameters::default();
@@ -11,6 +11,8 @@
 //!
 //! ### 1. Client Registration Start
 //! ```
+//! # use khape::Parameters;
+//! # let params = Parameters::default();
 //! use khape::Client;
 //! let uid = String::from("john123");
 //! let password = b"password123";
@@ -22,6 +24,13 @@
 //!
 //! ### 2. Server Registration Start
 //! ```
+//! # use khape::Parameters;
+//! # use khape::Client;
+//! # let params = Parameters::default();
+//! # let uid = String::from("john123");
+//! # let password = b"password123";
+//! # let client = Client::new(params, uid);
+//! # let (register_request, oprf_client_state) = client.register_start(password);
 //! use khape::Server;
 //! let server = Server::new(params);
 //! let (register_response, pre_register_secrets) = server.register_start(register_request);
@@ -30,6 +39,16 @@
 //!
 //! ### 3. Client Registration Finish
 //! ```
+//! # use khape::Parameters;
+//! # use khape::Client;
+//! # use khape::Server;
+//! # let params = Parameters::default();
+//! # let uid = String::from("john123");
+//! # let password = b"password123";
+//! # let client = Client::new(params, uid);
+//! # let server = Server::new(params);
+//! # let (register_request, oprf_client_state) = client.register_start(password);
+//! # let (register_response, pre_register_secrets) = server.register_start(register_request);
 //! let register_finish = client.register_finish(register_response, oprf_client_state);
 //! ```
 //! Client sends `register_finish` to the server.
@@ -37,6 +56,17 @@
 //! ### 4. Server Registration Finish
 //! Server retrieves stored `pre_register_secrets` indexed with `register_finish.uid`.
 //! ```
+//! # use khape::Parameters;
+//! # use khape::Client;
+//! # use khape::Server;
+//! # let params = Parameters::default();
+//! # let uid = String::from("john123");
+//! # let password = b"password123";
+//! # let client = Client::new(params, uid);
+//! # let server = Server::new(params);
+//! # let (register_request, oprf_client_state) = client.register_start(password);
+//! # let (register_response, pre_register_secrets) = server.register_start(register_request);
+//! # let register_finish = client.register_finish(register_response, oprf_client_state);
 //! let file_entry = server.register_finish(register_finish, pre_register_secrets);
 //! ```
 //! Server stores `file_entry` on the server using `register_finish.uid` as index.
@@ -45,6 +75,8 @@
 //!
 //! ### 1. Client Login Start
 //! ```
+//! # use khape::Parameters;
+//! # let params = Parameters::default();
 //! use khape::Client;
 //! let uid = String::from("john123");
 //! let password = b"password123";
@@ -57,8 +89,19 @@
 //! ### 2. Server Login Start
 //! Server retrieves user's `file_entry` from storage using `auth_request.uid` as index.
 //! ```
+//! # use khape::Parameters;
+//! # let params = Parameters::default();
+//! # use khape::Client;
+//! # let uid = String::from("john123");
+//! # let password = b"password123";
+//! # let client = Client::new(params, uid);
 //! use khape::Server;
 //! let server = Server::new(params);
+//! # let (register_request, oprf_client_state) = client.register_start(password);
+//! # let (register_response, pre_register_secrets) = server.register_start(register_request);
+//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let file_entry = server.register_finish(register_finish, pre_register_secrets);
+//! # let (auth_request, oprf_client_state) = client.auth_start(password);
 //! let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
 //! ```
 //! Server sends `auth_response` back to the client and store `server_ephemeral_keys` using `auth_request.uid` or `auth_request.sid` as index.
@@ -67,6 +110,20 @@
 //!
 //! ### 3. Client Login Key Exchange
 //! ```
+//! # use khape::Parameters;
+//! # use khape::Client;
+//! # use khape::Server;
+//! # let params = Parameters::default();
+//! # let uid = String::from("john123");
+//! # let password = b"password123";
+//! # let client = Client::new(params, uid);
+//! # let server = Server::new(params);
+//! # let (register_request, oprf_client_state) = client.register_start(password);
+//! # let (register_response, pre_register_secrets) = server.register_start(register_request);
+//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let file_entry = server.register_finish(register_finish, pre_register_secrets);
+//! # let (auth_request, oprf_client_state) = client.auth_start(password);
+//! # let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
 //! let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
 //! ```
 //! Client sends `auth_verify_request` to the server and keep `ke_output`.
@@ -75,12 +132,43 @@
 //! Server retrieves user's `file_entry` from storage using `auth_verify_request.uid` as index.
 //! Server also retrieves user's specific `server_ephemeral_keys` from server storage using `auth_verify_request.uid`.
 //! ```
+//! # use khape::Parameters;
+//! # use khape::Client;
+//! # use khape::Server;
+//! # let params = Parameters::default();
+//! # let uid = String::from("john123");
+//! # let password = b"password123";
+//! # let client = Client::new(params, uid);
+//! # let server = Server::new(params);
+//! # let (register_request, oprf_client_state) = client.register_start(password);
+//! # let (register_response, pre_register_secrets) = server.register_start(register_request);
+//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let file_entry = server.register_finish(register_finish, pre_register_secrets);
+//! # let (auth_request, oprf_client_state) = client.auth_start(password);
+//! # let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
+//! # let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
 //! let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
 //! ```
 //! Server sends `auth_verify_response` back to the client and he can use the session key `server_output_key` after verifying its validity (Option) ,
 //!
 //! ### 5. Client Login Finish
 //! ```
+//! # use khape::Parameters;
+//! # use khape::Client;
+//! # use khape::Server;
+//! # let params = Parameters::default();
+//! # let uid = String::from("john123");
+//! # let password = b"password123";
+//! # let client = Client::new(params, uid);
+//! # let server = Server::new(params);
+//! # let (register_request, oprf_client_state) = client.register_start(password);
+//! # let (register_response, pre_register_secrets) = server.register_start(register_request);
+//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let file_entry = server.register_finish(register_finish, pre_register_secrets);
+//! # let (auth_request, oprf_client_state) = client.auth_start(password);
+//! # let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
+//! # let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
+//! # let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
 //! let client_output_key = client.auth_finish(auth_verify_response, ke_output);
 //! ```
 //! Client can use the session key `client_output_key` after verifying its validity (Option).
