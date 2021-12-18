@@ -17,7 +17,7 @@ const STR_EXPORT_KEY: &[u8; 9] = b"ExportKey";
 type HkdfSha256 = Hkdf<Sha3_256>;
 
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyExchangeOutput {
     pub(crate) output_key: OutputKey,
     pub(crate) client_verify_tag: VerifyTag,
