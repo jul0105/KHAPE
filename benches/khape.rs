@@ -2,7 +2,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use khape::*;
 
-const USE_OPRF: bool = false;
+const USE_OPRF: bool = true;
 const USE_SLOW_HASH: bool = false;
 
 pub fn client_initialization(c: &mut Criterion) {
@@ -155,6 +155,47 @@ pub fn client_auth_finish(c: &mut Criterion) {
     c.bench_function("client_auth_finish", |b| b.iter(|| client.auth_finish(black_box(auth_verify_response.clone()), black_box(ke_output.clone()))));
 }
 
+fn register(param: Parameters, uid: &str, password: &[u8]) -> FileEntry {
+    let client = Client::new(param, String::from(uid));
+    let server = Server::new(param);
+
+    let (register_request, oprf_client_state) = client.register_start(password);
+    let (register_response, pre_register_secrets) = server.register_start(register_request);
+    let register_finish = client.register_finish(register_response, oprf_client_state);
+    server.register_finish(register_finish, pre_register_secrets)
+}
+
+fn auth(param: Parameters, uid: &str, password: &[u8], file_entry: &FileEntry) -> (Option<OutputKey>, Option<OutputKey>) {
+    let client = Client::new(param, String::from(uid));
+    let server = Server::new(param);
+
+    let (auth_request, oprf_client_state) = client.auth_start(password);
+    let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, file_entry);
+    let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
+    let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, file_entry);
+    let client_output_key = client.auth_finish(auth_verify_response, ke_output);
+    (client_output_key, server_output_key)
+}
+
+pub fn overall_register(c: &mut Criterion) {
+    let params = Parameters::new(USE_OPRF, USE_SLOW_HASH);
+    let uid = "username";
+    let password = b"password";
+
+    c.bench_function("overall_register", |b| b.iter(|| register(black_box(params), black_box(uid), black_box(password))));
+}
+
+pub fn overall_auth(c: &mut Criterion) {
+    let params = Parameters::new(USE_OPRF, USE_SLOW_HASH);
+    let uid = "username";
+    let password = b"password";
+    let file_entry = register(params, uid, password);
+
+    c.bench_function("overall_auth", |b| b.iter(|| auth(black_box(params), black_box(uid), black_box(password), black_box(&file_entry))));
+}
+
+
+
 
 
 criterion_group!(
@@ -170,5 +211,7 @@ criterion_group!(
     client_auth_ke,
     server_auth_finish,
     client_auth_finish,
+    overall_register,
+    overall_auth,
     );
 criterion_main!(benches);
