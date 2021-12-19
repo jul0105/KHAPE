@@ -27,6 +27,8 @@ serde-big-array = { version = "0.3", features = ["const-generics"] } # for ciphe
 [dev-dependencies]
 serde_json = "1"
 criterion = { version = "0.3", features = ["html_reports", "csv_output"] }
+aes = { version = "0.7.5", features = ["ctr"] }
+ctr = "0.8.0"
 
 [[bench]]
 name = "khape"

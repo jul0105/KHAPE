@@ -3,6 +3,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use khape::*;
 use rand::{thread_rng, Rng};
 use std::convert::TryFrom;
+use ctr::cipher::{NewCipher, StreamCipher};
 
 const USE_OPRF: bool = true;
 const USE_SLOW_HASH: bool = false;
@@ -246,9 +247,42 @@ pub fn ideal_cipher_decryption(c: &mut Criterion) {
     c.bench_function("ideal_cipher_decryption", |b| b.iter(|| decrypt_feistel_pub(key, ciphertext)));
 }
 
+pub fn aes_encryption(c: &mut Criterion) {
+    let key = thread_rng().gen::<[u8; 32]>();
+    let (priv_a, _) = generate_keys_pub();
+    let (_, pub_b) = generate_keys_pub();
+    let plaintext = <[u8; 64]>::try_from([priv_a.to_bytes(), pub_b.to_bytes()].concat()).unwrap();
+
+    c.bench_function("aes_encryption", |b| b.iter(|| aes_encrypt(key, plaintext)));
+}
+
+pub fn aes_decryption(c: &mut Criterion) {
+    let key = thread_rng().gen::<[u8; 32]>();
+    let (priv_a, _) = generate_keys_pub();
+    let (_, pub_b) = generate_keys_pub();
+    let plaintext = <[u8; 64]>::try_from([priv_a.to_bytes(), pub_b.to_bytes()].concat()).unwrap();
+    let ciphertext = aes_encrypt(key, plaintext);
+
+    c.bench_function("aes_decryption", |b| b.iter(|| aes_encrypt(key, ciphertext)));
+}
+
+fn aes_encrypt(key: [u8; 32], plaintex: [u8; 64]) -> [u8; 64] {
+    let mut data = plaintex.clone();
+
+    type Aes256Ctr = ctr::Ctr128BE<aes::Aes256>;
+
+    let nonce = b"and secret nonce";
+
+    // create cipher instance
+    let mut cipher = Aes256Ctr::new((&key).into(), nonce.into());
+
+    // apply keystream (encrypt)
+    cipher.apply_keystream(&mut data);
+    data
+}
 
 criterion_group!(
-    benches,
+    benches_endpoint,
     client_initialization,
     server_initialization,
     client_register_start,
@@ -275,4 +309,14 @@ criterion_group!(
     ideal_cipher_encryption,
     ideal_cipher_decryption,
 );
-criterion_main!(benches, beanches_overall, benches_component);
+criterion_group!(
+    benches_external,
+    aes_encryption,
+    aes_decryption,
+);
+criterion_main!(
+    benches_endpoint,
+    beanches_overall,
+    benches_component,
+    benches_external,
+);
