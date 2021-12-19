@@ -3,6 +3,16 @@ use crate::group::compute_shared_key;
 use crate::key_derivation;
 use crate::key_derivation::KeyExchangeOutput;
 
+#[cfg(feature = "bench")]
+pub fn compute_client_pub(pub_b: PublicKey, pub_y: PublicKey, priv_a: PrivateKey, priv_x: PrivateKey) -> KeyExchangeOutput {
+    compute_client(pub_b, pub_y, priv_a, priv_x)
+}
+
+#[cfg(feature = "bench")]
+pub fn compute_server_pub(pub_a: PublicKey, pub_x: PublicKey, priv_b: PrivateKey, priv_y: PrivateKey) -> KeyExchangeOutput {
+    compute_server(pub_a, pub_x, priv_b, priv_y)
+}
+
 pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: PrivateKey, priv_x: PrivateKey) -> KeyExchangeOutput {
     // B^x || Y^a || Y^x
     let o_client = [

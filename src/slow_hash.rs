@@ -6,6 +6,7 @@ pub(crate) fn hash(input: &[u8]) -> Vec<u8> {
         argon2::Algorithm::Argon2id,
         argon2::Version::V0x13,
         argon2::Params::new(16*1024, 3, 4, None).unwrap()
+//     argon2::Params::new(512*1024, 2, 8, None).unwrap()
     );
 
 

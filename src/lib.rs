@@ -192,3 +192,10 @@ pub use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerif
 pub use crate::message::{EphemeralKeys, FileEntry, PreRegisterSecrets};
 // Alias
 pub use crate::alias::{OutputKey};
+
+#[cfg(feature = "bench")]
+pub use crate::ideal_cipher::{encrypt_feistel_pub, decrypt_feistel_pub};
+#[cfg(feature = "bench")]
+pub use crate::group::{generate_keys_pub, compute_shared_key_pub};
+#[cfg(feature = "bench")]
+pub use crate::tripledh::{compute_client_pub, compute_server_pub};

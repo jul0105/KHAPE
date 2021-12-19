@@ -6,6 +6,15 @@ const PART_SIZE: usize = CIPHER_SIZE / 2;
 pub const KEY_SIZE: usize = PART_SIZE;
 const NB_FEISTEL_ROUND: usize = 14;
 
+#[cfg(feature = "bench")]
+pub fn encrypt_feistel_pub(key: [u8; KEY_SIZE], plaintext: [u8; CIPHER_SIZE]) -> [u8; CIPHER_SIZE] {
+    encrypt_feistel(key, plaintext)
+}
+
+#[cfg(feature = "bench")]
+pub fn decrypt_feistel_pub(key: [u8; KEY_SIZE], ciphertext: [u8; CIPHER_SIZE]) -> [u8; CIPHER_SIZE] {
+    decrypt_feistel(key, ciphertext)
+}
 
 pub(crate) fn encrypt_feistel(key: [u8; KEY_SIZE], plaintext: [u8; CIPHER_SIZE]) -> [u8; CIPHER_SIZE] {
     // Split plaintext in 2 equal part L0 and R0

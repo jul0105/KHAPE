@@ -6,6 +6,9 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+bench = []
+
 [patch.crates-io]
 curve25519-dalek = { path = "../07-curve25519-dalek-fork" }
 
@@ -28,3 +31,4 @@ criterion = { version = "0.3", features = ["html_reports", "csv_output"] }
 [[bench]]
 name = "khape"
 harness = false
+required-features = ["bench"]

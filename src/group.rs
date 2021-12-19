@@ -5,6 +5,16 @@ use rand::{Rng, thread_rng};
 
 use crate::alias::{PrivateKey, PublicKey, RawPublicKey, SharedKey};
 
+#[cfg(feature = "bench")]
+pub fn compute_shared_key_pub(own_private_key: PrivateKey, opposing_public_key: PublicKey) -> SharedKey {
+    compute_shared_key(own_private_key, opposing_public_key)
+}
+
+#[cfg(feature = "bench")]
+pub fn generate_keys_pub() -> (PrivateKey, PublicKey) {
+    generate_keys()
+}
+
 const SIGN: u8 = 0; // TODO elligator sign
 
 fn compute_public_key(private_key: PrivateKey) -> RawPublicKey {
