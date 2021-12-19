@@ -1,6 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 
 use khape::*;
+use rand::{thread_rng, Rng};
+use std::convert::TryFrom;
 
 const USE_OPRF: bool = true;
 const USE_SLOW_HASH: bool = false;
@@ -196,6 +198,53 @@ pub fn overall_auth(c: &mut Criterion) {
 
 
 
+pub fn group_generate_keys(c: &mut Criterion) {
+    c.bench_function("group_generate_keys", |b| b.iter(|| generate_keys_pub()));
+}
+
+pub fn group_compute_shared_key(c: &mut Criterion) {
+    let (priv_a, _) = generate_keys_pub();
+    let (_, pub_b) = generate_keys_pub();
+
+    c.bench_function("group_compute_shared_key", |b| b.iter(|| compute_shared_key_pub(black_box(priv_a), black_box(pub_b))));
+}
+
+pub fn tripledh_compute_client(c: &mut Criterion) {
+    let (priv_a, _) = generate_keys_pub();
+    let (_, pub_b) = generate_keys_pub();
+    let (priv_x, _) = generate_keys_pub();
+    let (_, pub_y) = generate_keys_pub();
+
+    c.bench_function("tripledh_compute_client", |b| b.iter(|| compute_client_pub(black_box(pub_b), black_box(pub_y), black_box(priv_a), black_box(priv_x))));
+}
+
+pub fn tripledh_compute_server(c: &mut Criterion) {
+    let (_, pub_a) = generate_keys_pub();
+    let (priv_b, _) = generate_keys_pub();
+    let (_, pub_x) = generate_keys_pub();
+    let (priv_y, _) = generate_keys_pub();
+
+    c.bench_function("tripledh_compute_server", |b| b.iter(|| compute_server_pub(black_box(pub_a), black_box(pub_x), black_box(priv_b), black_box(priv_y))));
+}
+
+pub fn ideal_cipher_encryption(c: &mut Criterion) {
+    let key = thread_rng().gen::<[u8; 32]>();
+    let (priv_a, _) = generate_keys_pub();
+    let (_, pub_b) = generate_keys_pub();
+    let plaintext = <[u8; 64]>::try_from([priv_a.to_bytes(), pub_b.to_bytes()].concat()).unwrap();
+
+    c.bench_function("ideal_cipher_encryption", |b| b.iter(|| encrypt_feistel_pub(key, plaintext)));
+}
+
+pub fn ideal_cipher_decryption(c: &mut Criterion) {
+    let key = thread_rng().gen::<[u8; 32]>();
+    let (priv_a, _) = generate_keys_pub();
+    let (_, pub_b) = generate_keys_pub();
+    let plaintext = <[u8; 64]>::try_from([priv_a.to_bytes(), pub_b.to_bytes()].concat()).unwrap();
+    let ciphertext = encrypt_feistel_pub(key, plaintext);
+
+    c.bench_function("ideal_cipher_decryption", |b| b.iter(|| decrypt_feistel_pub(key, ciphertext)));
+}
 
 
 criterion_group!(
@@ -211,7 +260,19 @@ criterion_group!(
     client_auth_ke,
     server_auth_finish,
     client_auth_finish,
+);
+criterion_group!(
+    beanches_overall,
     overall_register,
     overall_auth,
-    );
-criterion_main!(benches);
+);
+criterion_group!(
+    benches_component,
+    group_generate_keys,
+    group_compute_shared_key,
+    tripledh_compute_client,
+    tripledh_compute_server,
+    ideal_cipher_encryption,
+    ideal_cipher_decryption,
+);
+criterion_main!(benches, beanches_overall, benches_component);
