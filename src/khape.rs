@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use crate::{group, slow_hash, oprf, tripledh, key_derivation};
-use crate::alias::OutputKey;
+use crate::alias::{OutputKey, ExportKey};
 use crate::encryption::Envelope;
 use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, EphemeralKeys, FileEntry, PreRegisterSecrets, RegisterFinish, RegisterRequest, RegisterResponse};
 use crate::oprf::ClientState;
@@ -71,7 +71,7 @@ impl Client {
     }
 
     /// Return RegisterFinish (ciphertext, A)
-    pub fn register_finish(&self, register_response: RegisterResponse, client_state: ClientState) -> RegisterFinish {
+    pub fn register_finish(&self, register_response: RegisterResponse, client_state: ClientState) -> (RegisterFinish, ExportKey) {
         // Generate asymmetric key
         let (priv_a, pub_a) = group::generate_keys();
 
@@ -85,7 +85,7 @@ impl Client {
         };
 
         // Compute encryption key
-        let encryption_key = key_derivation::compute_envelope_key(oprf_output, hardened_output);
+        let (encryption_key, export_key) = key_derivation::compute_envelope_key(oprf_output, hardened_output);
 
         // Encrypt (a, B) with rw
         let envelope = Envelope {
@@ -95,11 +95,11 @@ impl Client {
         let encrypted_envelope = envelope.encrypt(<[u8; 32]>::try_from(encryption_key).unwrap());
 
         // Return ciphertext
-        RegisterFinish {
+        (RegisterFinish {
             uid: String::from(&self.uid),
             encrypted_envelope,
             pub_a,
-        }
+        }, export_key)
     }
 }
 
@@ -118,7 +118,7 @@ impl Client {
     }
 
     /// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
-    pub fn auth_ke(&self, auth_response: AuthResponse, client_state: ClientState) -> (AuthVerifyRequest, KeyExchangeOutput) {
+    pub fn auth_ke(&self, auth_response: AuthResponse, client_state: ClientState) -> (AuthVerifyRequest, KeyExchangeOutput, ExportKey) {
         // Generate asymmetric key
         let (priv_x, pub_x) = group::generate_keys();
 
@@ -132,7 +132,7 @@ impl Client {
         };
 
         // Compute encryption key
-        let encryption_key = key_derivation::compute_envelope_key(oprf_output, hardened_output);
+        let (encryption_key, export_key) = key_derivation::compute_envelope_key(oprf_output, hardened_output);
 
         // Decrypt (a, B) with rw
         let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(encryption_key).unwrap());
@@ -145,7 +145,7 @@ impl Client {
             uid: String::from(&self.uid),
             client_verify_tag: ke_output.client_verify_tag,
             pub_x,
-        }, ke_output)
+        }, ke_output, export_key)
     }
 
     /// Return OutputKey (K1)
@@ -279,7 +279,7 @@ mod tests {
         println!("Sending register response : {:?}", register_response_serialized);
         let register_response_deserialized: RegisterResponse = serde_json::from_str(&register_response_serialized).unwrap();
 
-        let register_finish = client.register_finish(register_response_deserialized, oprf_client_state);
+        let (register_finish, _) = client.register_finish(register_response_deserialized, oprf_client_state);
 
         let register_finish_serialized = serde_json::to_string(&register_finish).unwrap();
         println!("Sending register finish : {:?}", register_finish_serialized);
@@ -294,7 +294,7 @@ mod tests {
 
         let (register_request, oprf_client_state) = client.register_start(password);
         let (register_response, pre_register_secrets) = server.register_start(register_request);
-        let register_finish = client.register_finish(register_response, oprf_client_state);
+        let (register_finish, _) = client.register_finish(register_response, oprf_client_state);
         server.register_finish(register_finish, pre_register_secrets)
     }
 
@@ -304,7 +304,7 @@ mod tests {
 
         let (auth_request, oprf_client_state) = client.auth_start(password);
         let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
-        let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
+        let (auth_verify_request, ke_output, _) = client.auth_ke(auth_response, oprf_client_state);
         let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
         let client_output_key = client.auth_finish(auth_verify_response, ke_output);
         (client_output_key, server_output_key)

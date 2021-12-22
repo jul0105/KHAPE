@@ -58,8 +58,9 @@ pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> KeyEx
 }
 
 // Follow OPAQUE-ke
-pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8>) -> Vec<u8> {
+pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
     let mut encryption_key = vec![0u8; KEY_SIZE];
+    let mut export_key = vec![0u8; KEY_SIZE];
 
     let hkdf = HkdfSha256::new(
         None,
@@ -67,7 +68,8 @@ pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8
     );
 
     hkdf.expand(STR_ENCRYPTION_KEY, &mut encryption_key);
-    encryption_key
+    hkdf.expand(STR_EXPORT_KEY, &mut export_key);
+    (encryption_key, export_key)
 }
 
 

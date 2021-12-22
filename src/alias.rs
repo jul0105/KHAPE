@@ -7,6 +7,7 @@ pub(crate) type PrivateKey = curve25519_dalek::scalar::Scalar;
 
 pub type PreKey = [u8; 32];
 pub type OutputKey = [u8; 32];
+pub type ExportKey = Vec<u8>;
 pub(crate) type VerifyTag = OutputKey;
 pub(crate) type FileStorage = Vec<crate::message::FileEntry>;
 

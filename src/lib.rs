@@ -49,8 +49,9 @@
 //! # let server = Server::new(params);
 //! # let (register_request, oprf_client_state) = client.register_start(password);
 //! # let (register_response, pre_register_secrets) = server.register_start(register_request);
-//! let register_finish = client.register_finish(register_response, oprf_client_state);
+//! let (register_finish, export_key) = client.register_finish(register_response, oprf_client_state);
 //! ```
+//! `export_key` can be used for application specific encryption.
 //! Client sends `register_finish` to the server.
 //!
 //! ### 4. Server Registration Finish
@@ -66,7 +67,7 @@
 //! # let server = Server::new(params);
 //! # let (register_request, oprf_client_state) = client.register_start(password);
 //! # let (register_response, pre_register_secrets) = server.register_start(register_request);
-//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let (register_finish, export_key) = client.register_finish(register_response, oprf_client_state);
 //! let file_entry = server.register_finish(register_finish, pre_register_secrets);
 //! ```
 //! Server stores `file_entry` on the server using `register_finish.uid` as index.
@@ -99,7 +100,7 @@
 //! let server = Server::new(params);
 //! # let (register_request, oprf_client_state) = client.register_start(password);
 //! # let (register_response, pre_register_secrets) = server.register_start(register_request);
-//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let (register_finish, export_key) = client.register_finish(register_response, oprf_client_state);
 //! # let file_entry = server.register_finish(register_finish, pre_register_secrets);
 //! # let (auth_request, oprf_client_state) = client.auth_start(password);
 //! let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
@@ -120,12 +121,13 @@
 //! # let server = Server::new(params);
 //! # let (register_request, oprf_client_state) = client.register_start(password);
 //! # let (register_response, pre_register_secrets) = server.register_start(register_request);
-//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let (register_finish, export_key) = client.register_finish(register_response, oprf_client_state);
 //! # let file_entry = server.register_finish(register_finish, pre_register_secrets);
 //! # let (auth_request, oprf_client_state) = client.auth_start(password);
 //! # let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
-//! let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
+//! let (auth_verify_request, ke_output, export_key) = client.auth_ke(auth_response, oprf_client_state);
 //! ```
+//! `export_key` can be used for application specific encryption.
 //! Client sends `auth_verify_request` to the server and keep `ke_output`.
 //!
 //! ### 4. Server Login Finish
@@ -142,11 +144,11 @@
 //! # let server = Server::new(params);
 //! # let (register_request, oprf_client_state) = client.register_start(password);
 //! # let (register_response, pre_register_secrets) = server.register_start(register_request);
-//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let (register_finish, export_key) = client.register_finish(register_response, oprf_client_state);
 //! # let file_entry = server.register_finish(register_finish, pre_register_secrets);
 //! # let (auth_request, oprf_client_state) = client.auth_start(password);
 //! # let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
-//! # let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
+//! # let (auth_verify_request, ke_output, export_key) = client.auth_ke(auth_response, oprf_client_state);
 //! let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
 //! ```
 //! Server sends `auth_verify_response` back to the client and he can use the session key `server_output_key` after verifying its validity (Option) ,
@@ -163,11 +165,11 @@
 //! # let server = Server::new(params);
 //! # let (register_request, oprf_client_state) = client.register_start(password);
 //! # let (register_response, pre_register_secrets) = server.register_start(register_request);
-//! # let register_finish = client.register_finish(register_response, oprf_client_state);
+//! # let (register_finish, export_key) = client.register_finish(register_response, oprf_client_state);
 //! # let file_entry = server.register_finish(register_finish, pre_register_secrets);
 //! # let (auth_request, oprf_client_state) = client.auth_start(password);
 //! # let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
-//! # let (auth_verify_request, ke_output) = client.auth_ke(auth_response, oprf_client_state);
+//! # let (auth_verify_request, ke_output, export_key) = client.auth_ke(auth_response, oprf_client_state);
 //! # let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
 //! let client_output_key = client.auth_finish(auth_verify_response, ke_output);
 //! ```
@@ -191,7 +193,7 @@ pub use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerif
 // Server struct
 pub use crate::message::{EphemeralKeys, FileEntry, PreRegisterSecrets};
 // Alias
-pub use crate::alias::{OutputKey};
+pub use crate::alias::{OutputKey, ExportKey};
 
 #[cfg(feature = "bench")]
 pub use crate::ideal_cipher::{encrypt_feistel_pub, decrypt_feistel_pub};
