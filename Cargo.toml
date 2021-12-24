@@ -10,7 +10,7 @@ edition = "2018"
 bench = []
 
 [patch.crates-io]
-curve25519-dalek = { path = "../07-curve25519-dalek-fork" }
+curve25519-dalek = { git = "https://github.com/jul0105/curve25519-dalek.git" }
 
 [dependencies]
 curve25519-dalek = { version = "3.2.0", features = ["serde"] }
