@@ -41,8 +41,8 @@ pub(crate) fn generate_keys() -> (PrivateKey, PublicKey) {
         let private_key = generate_private_key();
         let public_key = compute_public_key(private_key);
         let result = decode_public_key(&public_key);
-        if result.is_some() {
-            return (private_key, result.unwrap())
+        if let Some(field_element) = result {
+            return (private_key, field_element);
         }
     }
 }
@@ -104,7 +104,7 @@ mod tests {
     #[test]
     fn bench_generate_private_key_2() {
         let mut sum = 0;
-        for _ in 0..100 {
+        for _ in 0..1000 {
             let mut i = 0;
             loop {
                 let private_key_candidate = Scalar::from_bits(thread_rng().gen::<[u8; 32]>());
