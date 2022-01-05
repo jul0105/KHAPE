@@ -85,9 +85,50 @@ mod tests {
     use super::*;
 
     #[test]
-    fn try_compute_output_key_and_tag() {
-        let ke_output = compute_output_key_and_tag(b"daiuwdhawuidhiuwad", b"");
+    fn test_compute_output_key_and_tag() {
+        let secret = b"19823iojda98s710iio23juiah";
+        let context = b"";
+        let ke_output = compute_output_key_and_tag(secret, context);
 
-        println!("{:?}", ke_output);
+        assert_eq!(ke_output.output_key.len(), KEY_SIZE);
+        assert_eq!(ke_output.server_verify_tag.len(), KEY_SIZE);
+        assert_eq!(ke_output.client_verify_tag.len(), KEY_SIZE);
     }
+
+    #[test]
+    fn test_compute_output_key_and_tag_with_same_secret() {
+        let secret = b"19823iojda98s710iio23juiah";
+        let context = b"";
+        let ke_output1 = compute_output_key_and_tag(secret, context);
+        let ke_output2 = compute_output_key_and_tag(secret, context);
+
+        assert_eq!(ke_output1, ke_output2)
+    }
+
+    #[test]
+    fn test_compute_output_key_and_tag_with_different_secret() {
+        let secret1 = b"19823iojda98s710iio23juiah";
+        let secret2 = b"19823iojda98s710iio23juiai";
+        let context = b"";
+        assert_ne!(secret1, secret2);
+
+        let ke_output1 = compute_output_key_and_tag(secret1, context);
+        let ke_output2 = compute_output_key_and_tag(secret2, context);
+
+        assert_ne!(ke_output1, ke_output2)
+    }
+
+    #[test]
+    fn test_compute_output_key_and_tag_with_different_context() {
+        let secret = b"19823iojda98s710iio23juiah";
+        let context1 = b"0";
+        let context2 = b"1";
+        assert_ne!(context1, context2);
+
+        let ke_output1 = compute_output_key_and_tag(secret, context1);
+        let ke_output2 = compute_output_key_and_tag(secret, context2);
+
+        assert_ne!(ke_output1, ke_output2)
+    }
+
 }

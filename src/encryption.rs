@@ -51,6 +51,7 @@ mod tests {
     use crate::group::generate_keys;
 
     use super::*;
+    use rand::{thread_rng, Rng};
 
     #[test]
     fn test_encrypt_decrypt() {
@@ -72,6 +73,27 @@ mod tests {
 
         assert_eq!(priv_a, envelope2.priv_a);
         assert_eq!(pub_b, envelope2.pub_b);
+    }
 
+    #[test]
+    fn test_encrypt_decrypt_random_key() {
+        let key: [u8; 32] = thread_rng().gen();
+
+        let (priv_a, pub_b) = generate_keys();
+        let envelope = Envelope {
+            priv_a,
+            pub_b,
+        };
+
+        let encrypted_envelope = envelope.encrypt(key);
+        let envelope2 = encrypted_envelope.decrypt(key);
+
+        println!("a1 : {:?}", priv_a);
+        println!("B1 : {:?}", pub_b);
+        println!("a2 : {:?}", envelope2.priv_a);
+        println!("B2 : {:?}", envelope2.pub_b);
+
+        assert_eq!(priv_a, envelope2.priv_a);
+        assert_eq!(pub_b, envelope2.pub_b);
     }
 }

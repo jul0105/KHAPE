@@ -85,4 +85,70 @@ mod tests {
 
         assert_eq!(plaintext, plaintext2);
     }
+
+    #[test]
+    fn test_encrypt_decrypt_with_wront_key() {
+        let plaintext = [189, 206, 64, 10, 51, 196, 203, 62, 105, 37, 166, 237, 79, 135, 252, 150, 218, 250, 110, 164, 152, 156, 103, 156, 56, 193, 184, 151, 62, 156, 211, 199, 220, 249, 70, 200, 28, 188, 9, 7, 60, 182, 247, 218, 96, 131, 73, 205, 149, 39, 75, 246, 45, 113, 6, 134, 165, 66, 31, 58, 148, 142, 242, 197];
+        let key1 = [2u8; 32];
+        let key2 = [3u8; 32];
+
+        let ciphertext = encrypt_feistel(key1, plaintext);
+
+        let plaintext2 = decrypt_feistel(key2, ciphertext);
+
+        println!("plaintext1 : {:?}", plaintext);
+        println!("ciphertext : {:?}", ciphertext);
+        println!("plaintext2 : {:?}", plaintext2);
+
+        assert_ne!(plaintext, plaintext2);
+    }
+
+    #[test]
+    fn test_decrypt_encrypt() {
+        let ciphertext = [189, 206, 64, 10, 51, 196, 203, 62, 105, 37, 166, 237, 79, 135, 252, 150, 218, 250, 110, 164, 152, 156, 103, 156, 56, 193, 184, 151, 62, 156, 211, 199, 220, 249, 70, 200, 28, 188, 9, 7, 60, 182, 247, 218, 96, 131, 73, 205, 149, 39, 75, 246, 45, 113, 6, 134, 165, 66, 31, 58, 148, 142, 242, 197];
+        let key = [2u8; 32];
+
+        let plaintext = decrypt_feistel(key, ciphertext);
+
+        let ciphertext2 = encrypt_feistel(key, plaintext);
+
+        println!("ciphertext : {:?}", ciphertext);
+        println!("plaintext : {:?}", plaintext);
+        println!("ciphertext2 : {:?}", ciphertext2);
+
+        assert_eq!(ciphertext, ciphertext2);
+    }
+
+    #[test]
+    fn test_decrypt_encrypt_with_wrong_key() {
+        let ciphertext = [189, 206, 64, 10, 51, 196, 203, 62, 105, 37, 166, 237, 79, 135, 252, 150, 218, 250, 110, 164, 152, 156, 103, 156, 56, 193, 184, 151, 62, 156, 211, 199, 220, 249, 70, 200, 28, 188, 9, 7, 60, 182, 247, 218, 96, 131, 73, 205, 149, 39, 75, 246, 45, 113, 6, 134, 165, 66, 31, 58, 148, 142, 242, 197];
+        let key1 = [2u8; 32];
+        let key2 = [3u8; 32];
+
+        let plaintext = decrypt_feistel(key1, ciphertext);
+
+        let ciphertext2 = encrypt_feistel(key2, plaintext);
+
+        println!("ciphertext : {:?}", ciphertext);
+        println!("plaintext : {:?}", plaintext);
+        println!("ciphertext2 : {:?}", ciphertext2);
+
+        assert_ne!(ciphertext, ciphertext2);
+    }
+
+    #[test]
+    fn test_double_encrypt() {
+        let plaintext = [189, 206, 64, 10, 51, 196, 203, 62, 105, 37, 166, 237, 79, 135, 252, 150, 218, 250, 110, 164, 152, 156, 103, 156, 56, 193, 184, 151, 62, 156, 211, 199, 220, 249, 70, 200, 28, 188, 9, 7, 60, 182, 247, 218, 96, 131, 73, 205, 149, 39, 75, 246, 45, 113, 6, 134, 165, 66, 31, 58, 148, 142, 242, 197];
+        let key = [2u8; 32];
+
+        let ciphertext = encrypt_feistel(key, plaintext);
+
+        let ciphertext2 = encrypt_feistel(key, ciphertext);
+
+        println!("plaintext : {:?}", plaintext);
+        println!("ciphertext : {:?}", ciphertext);
+        println!("ciphertext2 : {:?}", ciphertext2);
+
+        assert_ne!(plaintext, ciphertext2);
+    }
 }

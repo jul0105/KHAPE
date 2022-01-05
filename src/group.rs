@@ -74,21 +74,31 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_private_key_with_rejection_method() {
-        for i in 0..1000 {
-            let random_bytes = thread_rng().gen::<[u8; KEY_SIZE]>();
-            let a = Scalar::from_canonical_bytes(random_bytes);
-            if a.is_some() {
-                println!("Success on try {}", i);
-                return;
-            } else {
-                println!("try {}", i);
-            }
-        }
+    fn test_compute_public_key() {
+        let private_key_1 = Scalar::from_bits([1u8; KEY_SIZE]);
+        let private_key_2 = Scalar::from_bits([2u8; KEY_SIZE]);
+        assert_ne!(private_key_1, private_key_2);
+
+        let pub_key_1 = compute_public_key(private_key_1);
+        let pub_key_2 = compute_public_key(private_key_2);
+
+        assert_ne!(pub_key_1, pub_key_2)
     }
 
     #[test]
-    fn bench_generate_private_key() {
+    fn test_compute_dh() {
+        let (priv_a, pub_a) = generate_keys();
+        let (priv_b, pub_b) = generate_keys();
+        assert_ne!(priv_a, priv_b);
+        assert_ne!(pub_a, pub_b);
+
+        let k1 = compute_shared_key(priv_a, pub_b);
+        let k2 = compute_shared_key(priv_b, pub_a);
+        assert_eq!(k1, k2)
+    }
+
+    #[test]
+    fn bench_generate_private_key_with_rejection_method() {
         let mut sum = 0;
         for _ in 0..100 {
             let mut i = 0;
@@ -107,7 +117,7 @@ mod tests {
     }
 
     #[test]
-    fn bench_generate_private_key_2() {
+    fn bench_generate_private_key_with_rejection_method_2() {
         let mut sum = 0;
         for _ in 0..1000 {
             let mut i = 0;

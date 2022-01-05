@@ -59,6 +59,8 @@ mod tests {
     use crate::group::generate_keys;
 
     use super::*;
+    use curve25519_dalek::scalar::Scalar;
+    use crate::alias::KEY_SIZE;
 
     #[test]
     fn test_tripledh() {
@@ -74,5 +76,25 @@ mod tests {
         let k2 = compute_server(pub_a, pub_x, priv_b, priv_y);
 
         assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn test_tripledh_with_wrong_key() {
+        // Client
+        let (priv_a, pub_a) = generate_keys();
+        let (priv_x, pub_x) = generate_keys();
+
+        // Server
+        let (priv_b, pub_b) = generate_keys();
+        let (priv_y, pub_y) = generate_keys();
+
+        // Different key
+        let priv_a_mod = Scalar::from_bits([2u8; KEY_SIZE]);
+        assert_ne!(priv_a, priv_a_mod);
+
+        let k1 = compute_client(pub_b, pub_y, priv_a_mod, priv_x);
+        let k2 = compute_server(pub_a, pub_x, priv_b, priv_y);
+
+        assert_ne!(k1, k2);
     }
 }

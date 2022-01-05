@@ -106,7 +106,8 @@ mod tests {
         let use_oprf: bool = false;
 
         let (oprf_output1, oprf_output2) = oprf_process(password, password, use_oprf);
-        assert_eq!(oprf_output1, oprf_output2)    }
+        assert_eq!(oprf_output1, oprf_output2)
+    }
 
     #[test]
     fn test_oprf_turned_on_with_different_password() {
@@ -115,7 +116,8 @@ mod tests {
         let use_oprf: bool = true;
 
         let (oprf_output1, oprf_output2) = oprf_process(password1, password2, use_oprf);
-        assert_ne!(oprf_output1, oprf_output2)    }
+        assert_ne!(oprf_output1, oprf_output2)
+    }
 
     #[test]
     fn test_oprf_turned_off_with_different_password() {
@@ -124,7 +126,8 @@ mod tests {
         let use_oprf: bool = false;
 
         let (oprf_output1, oprf_output2) = oprf_process(password1, password2, use_oprf);
-        assert_ne!(oprf_output1, oprf_output2)    }
+        assert_ne!(oprf_output1, oprf_output2)
+    }
 
     fn oprf_process(password1: &[u8], password2: &[u8], use_oprf: bool) -> (Vec<u8>, Vec<u8>) {
         // Client

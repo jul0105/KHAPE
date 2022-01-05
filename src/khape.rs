@@ -328,26 +328,29 @@ mod tests {
         server.register_finish(register_finish_deserialized, pre_register_secrets);
     }
 
-    fn register(param: Parameters, uid: &str, password: &[u8]) -> FileEntry {
+    fn register(param: Parameters, uid: &str, password: &[u8]) -> (FileEntry, ExportKey) {
         let client = Client::new(param, String::from(uid));
         let server = Server::new(param);
 
         let (register_request, oprf_client_state) = client.register_start(password);
         let (register_response, pre_register_secrets) = server.register_start(register_request);
-        let (register_finish, _) = client.register_finish(register_response, oprf_client_state);
-        server.register_finish(register_finish, pre_register_secrets)
+        let (register_finish, export_key) = client.register_finish(register_response, oprf_client_state);
+        let file_entry = server.register_finish(register_finish, pre_register_secrets);
+
+        (file_entry, export_key)
     }
 
-    fn auth(param: Parameters, uid: &str, password: &[u8], file_entry: FileEntry) -> (Option<OutputKey>, Option<OutputKey>) {
+    fn auth(param: Parameters, uid: &str, password: &[u8], file_entry: FileEntry) -> (Option<OutputKey>, Option<OutputKey>, ExportKey) {
         let client = Client::new(param, String::from(uid));
         let server = Server::new(param);
 
         let (auth_request, oprf_client_state) = client.auth_start(password);
         let (auth_response, server_ephemeral_keys) = server.auth_start(auth_request, &file_entry);
-        let (auth_verify_request, ke_output, _) = client.auth_ke(auth_response, oprf_client_state);
+        let (auth_verify_request, ke_output, export_key) = client.auth_ke(auth_response, oprf_client_state);
         let (auth_verify_response, server_output_key) = server.auth_finish(auth_verify_request, server_ephemeral_keys, &file_entry);
         let client_output_key = client.auth_finish(auth_verify_response, ke_output);
-        (client_output_key, server_output_key)
+
+        (client_output_key, server_output_key, export_key)
     }
 
     #[test]
@@ -359,15 +362,16 @@ mod tests {
         let uid = "1234";
         let password = b"test";
 
-        let file_entry = register(param, uid, password);
-        let (client_output_key, server_output_key) = auth(param, uid, password, file_entry);
+        let (file_entry, _) = register(param, uid, password);
+        let (client_output_key, server_output_key, _) = auth(param, uid, password, file_entry);
 
         assert!(client_output_key.is_some());
+        assert!(server_output_key.is_some());
         assert_eq!(client_output_key, server_output_key);
     }
 
     #[test]
-    fn test_auth_different_password() {
+    fn test_register_auth_with_different_password() {
         let param = Parameters {
             use_oprf: true,
             use_slow_hash: None
@@ -376,11 +380,110 @@ mod tests {
         let password_register = b"test";
         let password_auth = b"testt";
 
-        let file_entry = register(param, uid, password_register);
-        let (client_output_key, server_output_key) = auth(param, uid, password_auth, file_entry);
+        let (file_entry, _) = register(param, uid, password_register);
+        let (client_output_key, server_output_key, _) = auth(param, uid, password_auth, file_entry);
 
         assert!(client_output_key.is_none());
         assert!(server_output_key.is_none());
-        assert_eq!(client_output_key, server_output_key);
+    }
+
+    #[test]
+    fn test_auth_with_different_password() {
+        let param = Parameters {
+            use_oprf: true,
+            use_slow_hash: None
+        };
+        let uid = "1234";
+        let password1 = b"test1";
+        let password2 = b"test2";
+        assert_ne!(password1, password2);
+
+        let (file_entry, _) = register(param, uid, password1);
+        let (client_output_key1, server_output_key1, _) = auth(param, uid, password1, file_entry.clone());
+
+        assert!(client_output_key1.is_some());
+        assert!(server_output_key1.is_some());
+        assert_eq!(client_output_key1, server_output_key1);
+
+        let (client_output_key2, server_output_key2, _) = auth(param, uid, password2, file_entry);
+        assert!(client_output_key2.is_none());
+        assert!(server_output_key2.is_none());
+    }
+
+    #[test]
+    fn test_two_register_result_in_different_file_entry() {
+        let param = Parameters {
+            use_oprf: true,
+            use_slow_hash: None
+        };
+        let uid = "1234";
+        let password = b"test";
+
+        let file_entry1 = register(param, uid, password);
+        let file_entry2 = register(param, uid, password);
+
+        assert_ne!(file_entry1, file_entry2);
+    }
+
+    #[test]
+    fn test_two_authentication_result_in_different_session_key() {
+        let param = Parameters {
+            use_oprf: true,
+            use_slow_hash: None
+        };
+        let uid = "1234";
+        let password = b"test";
+
+        let (file_entry, _) = register(param, uid, password);
+        let (client_output_key1, server_output_key1, _) = auth(param, uid, password, file_entry.clone());
+
+        assert!(client_output_key1.is_some());
+        assert!(server_output_key1.is_some());
+        assert_eq!(client_output_key1, server_output_key1);
+
+        let (client_output_key2, server_output_key2, _) = auth(param, uid, password, file_entry);
+        assert!(client_output_key2.is_some());
+        assert!(server_output_key2.is_some());
+        assert_eq!(client_output_key2, server_output_key2);
+
+        assert_ne!(client_output_key1, client_output_key2);
+        assert_ne!(server_output_key1, server_output_key2);
+    }
+
+    #[test]
+    fn test_export_key() {
+        let param = Parameters {
+            use_oprf: true,
+            use_slow_hash: None
+        };
+        let uid = "1234";
+        let password = b"test";
+
+        let (file_entry, register_export_key) = register(param, uid, password);
+        let (_, _, auth_export_key1) = auth(param, uid, password, file_entry.clone());
+        assert_eq!(register_export_key, auth_export_key1);
+
+        let (_, _, auth_export_key2) = auth(param, uid, password, file_entry);
+        assert_eq!(register_export_key, auth_export_key2);
+    }
+
+    #[test]
+    fn test_export_key_with_wrong_password() {
+        let param = Parameters {
+            use_oprf: true,
+            use_slow_hash: None
+        };
+        let uid = "1234";
+        let password1 = b"test1";
+        let password2 = b"test2";
+        assert_ne!(password1, password2);
+
+        let (file_entry, register_export_key) = register(param, uid, password1);
+        let (_, _, auth_export_key1) = auth(param, uid, password1, file_entry.clone());
+        assert_eq!(register_export_key, auth_export_key1);
+
+        let (_, _, auth_export_key2) = auth(param, uid, password2, file_entry);
+        assert_ne!(register_export_key, auth_export_key2);
+
     }
 }
