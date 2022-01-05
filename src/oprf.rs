@@ -82,7 +82,7 @@ pub(crate) fn client_finish(use_oprf: bool, client_state: ClientState, server_ev
                 EvaluationElement::<OprfGroup, Hash>::deserialize(&server_evaluate_result.unwrap()).unwrap(),
                     None,
                 ).expect("Unable to perform client finalization").to_vec(),
-            false => pw, // Should produce an error
+            false => panic!("No server evaluation provided"),
         }
     }
 }
