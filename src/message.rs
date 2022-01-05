@@ -1,7 +1,7 @@
 use core::option::Option;
 use serde::{Deserialize, Serialize};
 
-use crate::alias::{PrivateKey, PublicKey, VerifyTag};
+use crate::alias::{PrivateKey, PublicKey, VerifyTag, OPRF_SALT_SIZE};
 use crate::encryption::EncryptedEnvelope;
 
 /////////////////////////////////////////
@@ -72,14 +72,14 @@ pub struct FileEntry {
     pub encrypted_envelope: EncryptedEnvelope,
     pub priv_b: PrivateKey,
     pub pub_a: PublicKey,
-    pub secret_salt: Option<[u8; 32]>,
+    pub secret_salt: Option<[u8; OPRF_SALT_SIZE]>,
 }
 
 // Serialize (store)
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PreRegisterSecrets {
     pub(crate) private_key: PrivateKey,
-    pub(crate) secret_salt: Option<[u8; 32]>
+    pub(crate) secret_salt: Option<[u8; OPRF_SALT_SIZE]>
 }
 
 // Serialize (store)

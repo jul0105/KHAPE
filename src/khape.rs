@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use crate::{group, slow_hash, oprf, tripledh, key_derivation};
-use crate::alias::{OutputKey, ExportKey};
+use crate::alias::{OutputKey, ExportKey, KEY_SIZE};
 use crate::encryption::Envelope;
 use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, EphemeralKeys, FileEntry, PreRegisterSecrets, RegisterFinish, RegisterRequest, RegisterResponse};
 use crate::oprf::ClientState;
@@ -92,7 +92,7 @@ impl Client {
             priv_a,
             pub_b: register_response.pub_b
         };
-        let encrypted_envelope = envelope.encrypt(<[u8; 32]>::try_from(encryption_key).unwrap());
+        let encrypted_envelope = envelope.encrypt(<[u8; KEY_SIZE]>::try_from(encryption_key).unwrap());
 
         // Return ciphertext
         (RegisterFinish {
@@ -135,7 +135,7 @@ impl Client {
         let (encryption_key, export_key) = key_derivation::compute_envelope_key(oprf_output, hardened_output);
 
         // Decrypt (a, B) with rw
-        let envelope = auth_response.encrypted_envelope.decrypt(<[u8; 32]>::try_from(encryption_key).unwrap());
+        let envelope = auth_response.encrypted_envelope.decrypt(<[u8; KEY_SIZE]>::try_from(encryption_key).unwrap());
 
         // Compute KeyHidingAKE
         let ke_output = tripledh::compute_client(envelope.pub_b, auth_response.pub_y, envelope.priv_a, priv_x);

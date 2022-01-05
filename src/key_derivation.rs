@@ -3,8 +3,7 @@ use std::convert::TryFrom;
 use hkdf::Hkdf;
 use sha3::{Digest, Sha3_256};
 
-use crate::alias::{OutputKey, VerifyTag};
-use crate::ideal_cipher::KEY_SIZE;
+use crate::alias::{OutputKey, VerifyTag, KEY_SIZE};
 
 static STR_CLIENT_MAC: &[u8] = b"ClientMAC";
 static STR_HANDSHAKE_SECRET: &[u8] = b"HandshakeSecret";
@@ -51,9 +50,9 @@ pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> KeyEx
     let server_verify_tag = compute_hkdf(&handshake_hkdf, STR_SERVER_MAC, b"");
 
     KeyExchangeOutput {
-        output_key: <[u8; 32]>::try_from(output_key).unwrap(),
-        client_verify_tag: <[u8; 32]>::try_from(client_verify_tag).unwrap(),
-        server_verify_tag: <[u8; 32]>::try_from(server_verify_tag).unwrap()
+        output_key: <[u8; KEY_SIZE]>::try_from(output_key).unwrap(),
+        client_verify_tag: <[u8; KEY_SIZE]>::try_from(client_verify_tag).unwrap(),
+        server_verify_tag: <[u8; KEY_SIZE]>::try_from(server_verify_tag).unwrap()
     }
 }
 

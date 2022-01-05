@@ -5,10 +5,17 @@ pub(crate) type SharedKey = curve25519_dalek::montgomery::MontgomeryPoint;
 pub(crate) type PublicKey = curve25519_dalek::field::FieldElement;
 pub(crate) type PrivateKey = curve25519_dalek::scalar::Scalar;
 
-pub type PreKey = [u8; 32];
-pub type OutputKey = [u8; 32];
+pub type OutputKey = [u8; KEY_SIZE];
 pub type ExportKey = Vec<u8>;
 pub(crate) type VerifyTag = OutputKey;
-pub(crate) type FileStorage = Vec<crate::message::FileEntry>;
-
 pub type OprfClientState = voprf::NonVerifiableClient<Group, Hash>;
+
+
+pub const KEY_SIZE: usize = 32;
+pub const CIPHER_SIZE: usize = KEY_SIZE * 2;
+pub const FEISTEL_PART_SIZE: usize = KEY_SIZE;
+pub const OPRF_SALT_SIZE: usize = KEY_SIZE;
+
+pub const ARGON2_M_COST: u32 = 16*1024;
+pub const ARGON2_T_COST: u32 = 3;
+pub const ARGON2_P_COST: u32 = 4;

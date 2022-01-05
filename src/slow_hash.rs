@@ -1,11 +1,12 @@
 use argon2::{Argon2, PasswordHasher};
 use argon2::password_hash::SaltString;
+use crate::alias::{ARGON2_M_COST, ARGON2_T_COST, ARGON2_P_COST};
 
 pub(crate) fn hash(input: &[u8]) -> Vec<u8> {
     let argon2 = Argon2::new(
         argon2::Algorithm::Argon2id,
         argon2::Version::V0x13,
-        argon2::Params::new(16*1024, 3, 4, None).unwrap()
+        argon2::Params::new(ARGON2_M_COST, ARGON2_T_COST, ARGON2_P_COST, None).unwrap()
 //     argon2::Params::new(512*1024, 2, 8, None).unwrap()
     );
 

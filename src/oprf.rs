@@ -2,7 +2,7 @@ use rand::{Rng, thread_rng};
 use rand::rngs::OsRng;
 use voprf::{BlindedElement, EvaluationElement, NonVerifiableClient, NonVerifiableServer};
 
-use crate::alias::{Group, Hash};
+use crate::alias::{Group, Hash, OPRF_SALT_SIZE};
 use crate::alias::OprfClientState;
 
 #[derive(Clone)]
@@ -12,7 +12,7 @@ pub enum ClientState {
 }
 
 
-pub(crate) fn generate_secret(use_oprf: bool) -> Option<[u8; 32]> {
+pub(crate) fn generate_secret(use_oprf: bool) -> Option<[u8; OPRF_SALT_SIZE]> {
     if use_oprf {
         Some(thread_rng().gen())
     } else {
@@ -35,7 +35,7 @@ pub(crate) fn client_init(use_oprf: bool, password: &[u8]) -> (ClientState, Opti
     (ClientState::WithOPRF(result.state), Some(result.message.serialize()))
 }
 
-pub(crate) fn server_evaluate(use_oprf: bool, client_blind_result: Option<Vec<u8>>, secret_salt: Option<[u8; 32]>) -> Option<Vec<u8>> {
+pub(crate) fn server_evaluate(use_oprf: bool, client_blind_result: Option<Vec<u8>>, secret_salt: Option<[u8; OPRF_SALT_SIZE]>) -> Option<Vec<u8>> {
     if !use_oprf {
         return None;
     }

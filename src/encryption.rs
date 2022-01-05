@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
 
-use crate::alias::{PrivateKey, PublicKey};
+use crate::alias::{PrivateKey, PublicKey, CIPHER_SIZE, KEY_SIZE, FEISTEL_PART_SIZE};
 use crate::ideal_cipher::{decrypt_feistel, encrypt_feistel};
 
 pub(crate) struct Envelope {
@@ -15,11 +15,11 @@ pub(crate) struct Envelope {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct EncryptedEnvelope {
     #[serde(with = "BigArray")]
-    ciphertext: [u8; 64],
+    ciphertext: [u8; CIPHER_SIZE],
 }
 
 impl Envelope {
-    pub(crate) fn encrypt(&self, key: [u8; 32]) -> EncryptedEnvelope {
+    pub(crate) fn encrypt(&self, key: [u8; KEY_SIZE]) -> EncryptedEnvelope {
         let plaintext = <[u8; 64]>::try_from([self.priv_a.to_bytes(), self.pub_b.to_bytes()].concat()).unwrap();
         let ciphertext = encrypt_feistel(key, plaintext);
 
@@ -30,10 +30,10 @@ impl Envelope {
 }
 
 impl EncryptedEnvelope {
-    pub(crate) fn decrypt(&self, key: [u8; 32]) -> Envelope {
+    pub(crate) fn decrypt(&self, key: [u8; KEY_SIZE]) -> Envelope {
         let plaintext = decrypt_feistel(key, self.ciphertext);
-        let left_part: [u8; 32] = <[u8; 32]>::try_from(&plaintext[0..32]).unwrap();
-        let right_part: [u8; 32] = <[u8; 32]>::try_from(&plaintext[32..64]).unwrap();
+        let left_part: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::try_from(&plaintext[0..FEISTEL_PART_SIZE]).unwrap();
+        let right_part: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::try_from(&plaintext[FEISTEL_PART_SIZE..CIPHER_SIZE]).unwrap();
 
         Envelope {
             priv_a: PrivateKey::from_bits(left_part),
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn test_encrypt_decrypt() {
-        let key = [1u8; 32];
+        let key = [1u8; KEY_SIZE];
 
         let (priv_a, pub_b) = generate_keys();
         let envelope = Envelope {

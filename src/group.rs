@@ -3,7 +3,7 @@ use curve25519_dalek::montgomery::{elligator_decode, elligator_encode};
 use curve25519_dalek::scalar::Scalar;
 use rand::{Rng, thread_rng};
 
-use crate::alias::{PrivateKey, PublicKey, RawPublicKey, SharedKey};
+use crate::alias::{PrivateKey, PublicKey, RawPublicKey, SharedKey, KEY_SIZE};
 
 #[cfg(feature = "bench")]
 pub fn compute_shared_key_pub(own_private_key: PrivateKey, opposing_public_key: PublicKey) -> SharedKey {
@@ -29,7 +29,7 @@ pub(crate) fn compute_shared_key(own_private_key: PrivateKey, opposing_public_ke
 /// If the value generated doesn't fit. Generate a new random value and test it again.
 fn generate_private_key() -> PrivateKey {
     loop {
-        let private_key_candidate = Scalar::from_bits(thread_rng().gen::<[u8; 32]>());
+        let private_key_candidate = Scalar::from_bits(thread_rng().gen::<[u8; KEY_SIZE]>());
         if private_key_candidate == private_key_candidate.reduce() {
             return private_key_candidate;
         }
@@ -71,7 +71,7 @@ mod tests {
     #[test]
     fn test_generate_private_key_with_rejection_method() {
         for i in 0..1000 {
-            let random_bytes = thread_rng().gen::<[u8; 32]>();
+            let random_bytes = thread_rng().gen::<[u8; KEY_SIZE]>();
             let a = Scalar::from_canonical_bytes(random_bytes);
             if a.is_some() {
                 println!("Success on try {}", i);
@@ -88,7 +88,7 @@ mod tests {
         for _ in 0..100 {
             let mut i = 0;
             loop {
-                let private_key_candidate = Scalar::from_canonical_bytes(thread_rng().gen::<[u8; 32]>());
+                let private_key_candidate = Scalar::from_canonical_bytes(thread_rng().gen::<[u8; KEY_SIZE]>());
                 if private_key_candidate.is_some() {
                     println!("succes after {} tries", i);
                     break;
@@ -107,7 +107,7 @@ mod tests {
         for _ in 0..1000 {
             let mut i = 0;
             loop {
-                let private_key_candidate = Scalar::from_bits(thread_rng().gen::<[u8; 32]>());
+                let private_key_candidate = Scalar::from_bits(thread_rng().gen::<[u8; KEY_SIZE]>());
                 if private_key_candidate == private_key_candidate.reduce() {
                     println!("succes after {} tries", i);
                     break;
