@@ -1,3 +1,5 @@
+//! OPRF operations wrapper. The OPRF backend is provided by voprf library
+
 use rand::{Rng, thread_rng};
 use rand::rngs::OsRng;
 use voprf::{BlindedElement, EvaluationElement, NonVerifiableClient, NonVerifiableServer};
@@ -5,6 +7,7 @@ use voprf::{BlindedElement, EvaluationElement, NonVerifiableClient, NonVerifiabl
 use crate::alias::{OprfGroup, Hash, OPRF_SALT_SIZE};
 use crate::alias::OprfClientState;
 
+/// Client state that is either the OPRF state or a plain password store when not using an OPRF
 #[derive(Clone)]
 pub enum ClientState {
     WithOPRF(OprfClientState),
@@ -12,6 +15,7 @@ pub enum ClientState {
 }
 
 
+/// OPRF secret salt generation
 pub(crate) fn generate_secret(use_oprf: bool) -> Option<[u8; OPRF_SALT_SIZE]> {
     if use_oprf {
         Some(thread_rng().gen())
@@ -20,6 +24,11 @@ pub(crate) fn generate_secret(use_oprf: bool) -> Option<[u8; OPRF_SALT_SIZE]> {
     }
 }
 
+/// OPRF client initialization (#1 OPRF function). Hash-to-curve the password and blind it with a random element.
+/// If OPRF is not used, the state only contains the password.
+/// password: User's password.
+///
+/// Return ClientState to be kept client-side and the blinded result message to be sent to the server.
 pub(crate) fn client_init(use_oprf: bool, password: &[u8]) -> (ClientState, Option<Vec<u8>>) {
     if !use_oprf {
         return (ClientState::WithoutOPRF(Vec::from(password)), None);
@@ -35,11 +44,17 @@ pub(crate) fn client_init(use_oprf: bool, password: &[u8]) -> (ClientState, Opti
     (ClientState::WithOPRF(result.state), Some(result.message.serialize()))
 }
 
+/// OPRF server evaluation (#2 OPRF function). Add the secret salt to the client's blinded result.
+/// If OPRF is not used, nothing is done.
+/// client_blind_result: Client's hashed and blinded password.
+/// secret_salt: Server's secret salt.
+///
+/// Return server evaluation result to be sent to the client.
 pub(crate) fn server_evaluate(use_oprf: bool, client_blind_result: Option<Vec<u8>>, secret_salt: Option<[u8; OPRF_SALT_SIZE]>) -> Option<Vec<u8>> {
     if !use_oprf {
         return None;
     }
-    
+
     if client_blind_result.is_none() || secret_salt.is_none() {
         return None; // Should produce an error
     }
@@ -53,6 +68,12 @@ pub(crate) fn server_evaluate(use_oprf: bool, client_blind_result: Option<Vec<u8
     ).expect("Unable to perform server evaluate").message.serialize())
 }
 
+/// OPRF client finish (#3 OPRF function). Un-blind the server's evaluation result to obtain the OPRF output.
+/// If OPRF is not used, user's password is outputted.
+/// client_state: Client state generated in client_init (#1) function that contains the blind and the password.
+/// server_evaluate_result: Server evaluation (add server's secret salt).
+///
+/// Return the OPRF output that can be used in the KHAPE protocol.
 pub(crate) fn client_finish(use_oprf: bool, client_state: ClientState, server_evaluate_result: Option<Vec<u8>>) -> Vec<u8> {
     return match client_state {
         ClientState::WithoutOPRF(pw) => pw,
