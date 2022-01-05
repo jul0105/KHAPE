@@ -1,23 +1,26 @@
+//! Feistel cipher scheme implementation that is indistinguishable from an ideal cipher
+
 use sha3::{Sha3_256, Digest};
 use std::convert::TryFrom;
-use crate::alias::{KEY_SIZE, CIPHER_SIZE, FEISTEL_PART_SIZE};
+use crate::alias::{KEY_SIZE, FEISTEL_CIPHER_SIZE, FEISTEL_PART_SIZE};
 
 const NB_FEISTEL_ROUND: usize = 14;
 
 #[cfg(feature = "bench")]
-pub fn encrypt_feistel_pub(key: [u8; KEY_SIZE], plaintext: [u8; CIPHER_SIZE]) -> [u8; CIPHER_SIZE] {
+pub fn encrypt_feistel_pub(key: [u8; KEY_SIZE], plaintext: [u8; FEISTEL_CIPHER_SIZE]) -> [u8; FEISTEL_CIPHER_SIZE] {
     encrypt_feistel(key, plaintext)
 }
 
 #[cfg(feature = "bench")]
-pub fn decrypt_feistel_pub(key: [u8; KEY_SIZE], ciphertext: [u8; CIPHER_SIZE]) -> [u8; CIPHER_SIZE] {
+pub fn decrypt_feistel_pub(key: [u8; KEY_SIZE], ciphertext: [u8; FEISTEL_CIPHER_SIZE]) -> [u8; FEISTEL_CIPHER_SIZE] {
     decrypt_feistel(key, ciphertext)
 }
 
-pub(crate) fn encrypt_feistel(key: [u8; KEY_SIZE], plaintext: [u8; CIPHER_SIZE]) -> [u8; CIPHER_SIZE] {
+/// Compute the 14-round Feistel cipher to encrypt
+pub(crate) fn encrypt_feistel(key: [u8; KEY_SIZE], plaintext: [u8; FEISTEL_CIPHER_SIZE]) -> [u8; FEISTEL_CIPHER_SIZE] {
     // Split plaintext in 2 equal part L0 and R0
     let mut left_part: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::try_from(&plaintext[0..FEISTEL_PART_SIZE]).unwrap();
-    let mut right_part: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::try_from(&plaintext[FEISTEL_PART_SIZE..CIPHER_SIZE]).unwrap();
+    let mut right_part: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::try_from(&plaintext[FEISTEL_PART_SIZE..FEISTEL_CIPHER_SIZE]).unwrap();
 
     // N-1 feistel round
     for i in 0..(NB_FEISTEL_ROUND - 1) {
@@ -29,13 +32,14 @@ pub(crate) fn encrypt_feistel(key: [u8; KEY_SIZE], plaintext: [u8; CIPHER_SIZE])
     // Final round (without mix)
     left_part = feistel_round(key, [(NB_FEISTEL_ROUND - 1) as u8], left_part, right_part);
 
-    <[u8; CIPHER_SIZE]>::try_from([left_part, right_part].concat()).unwrap()
+    <[u8; FEISTEL_CIPHER_SIZE]>::try_from([left_part, right_part].concat()).unwrap()
 }
 
-pub(crate) fn decrypt_feistel(key: [u8; KEY_SIZE], ciphertext: [u8; CIPHER_SIZE]) -> [u8; CIPHER_SIZE] {
+/// Compute the 14-round Feistel cipher to decrypt
+pub(crate) fn decrypt_feistel(key: [u8; KEY_SIZE], ciphertext: [u8; FEISTEL_CIPHER_SIZE]) -> [u8; FEISTEL_CIPHER_SIZE] {
     // Split plaintext in 2 equal part Ln+1 and Rn+1
     let mut right_part: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::try_from(&ciphertext[0..FEISTEL_PART_SIZE]).unwrap();
-    let mut left_part: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::try_from(&ciphertext[FEISTEL_PART_SIZE..CIPHER_SIZE]).unwrap();
+    let mut left_part: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::try_from(&ciphertext[FEISTEL_PART_SIZE..FEISTEL_CIPHER_SIZE]).unwrap();
 
     // N-1 feistel round
     for i in (1..NB_FEISTEL_ROUND).rev() {
@@ -47,9 +51,10 @@ pub(crate) fn decrypt_feistel(key: [u8; KEY_SIZE], ciphertext: [u8; CIPHER_SIZE]
     // Final round (without mix)
     right_part = feistel_round(key, [0u8], right_part, left_part);
 
-    <[u8; CIPHER_SIZE]>::try_from([right_part, left_part].concat()).unwrap()
+    <[u8; FEISTEL_CIPHER_SIZE]>::try_from([right_part, left_part].concat()).unwrap()
 }
 
+/// Individual Feistel round
 fn feistel_round(key: [u8; KEY_SIZE], round_nb: [u8; 1], left_part: [u8; FEISTEL_PART_SIZE], right_part: [u8; FEISTEL_PART_SIZE]) -> [u8; FEISTEL_PART_SIZE] {
     let hash_result: [u8; FEISTEL_PART_SIZE] = <[u8; FEISTEL_PART_SIZE]>::from(Sha3_256::new()
         .chain(key)

@@ -1,10 +1,13 @@
+//! Implementation of the KHAPE protocol
+
 use crate::{group, slow_hash, oprf, tripledh, key_derivation};
-use crate::alias::{OutputKey, ExportKey};
+use crate::alias::{OutputKey, ExportKey, DEFAULT_PARAM_USE_OPRF, DEFAULT_PARAM_USE_SLOW_HASH};
 use crate::encryption::Envelope;
 use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, EphemeralKeys, FileEntry, PreRegisterSecrets, RegisterFinish, RegisterRequest, RegisterResponse};
 use crate::oprf::ClientState;
 use crate::key_derivation::KeyExchangeOutput;
 
+/// Parameters of the KHAPE protocol
 #[derive(Clone, Copy)]
 pub struct Parameters {
     pub use_oprf: bool,
@@ -21,16 +24,19 @@ impl Parameters {
 
     pub fn default() -> Self {
         Parameters {
-            use_oprf: true,
-            use_slow_hash: true
+            use_oprf: DEFAULT_PARAM_USE_OPRF,
+            use_slow_hash: DEFAULT_PARAM_USE_SLOW_HASH
         }
     }
 }
 
+/// Provide the client-side functions of the protocol
 pub struct Client{
     pub parameters: Parameters,
     pub uid: String,
 }
+
+/// Provide the server-side functions of the protocol
 pub struct Server{
     pub parameters: Parameters
 }
@@ -56,7 +62,10 @@ impl Server {
 
 // Client register
 impl Client {
-    /// Return RegisterRequest and oprf_client_state
+    /// Client registration start (#1 registration function).
+    /// password: User's password.
+    ///
+    /// Return RegisterRequest to be sent to the server and ClientState to be kept client-side.
     pub fn register_start(&self, password: &[u8]) -> (RegisterRequest, ClientState) {
         // Compute OPRF initialization
         let (client_state, client_blind_result) = oprf::client_init(self.parameters.use_oprf, password);
@@ -68,7 +77,11 @@ impl Client {
         }, client_state)
     }
 
-    /// Return RegisterFinish (ciphertext, A)
+    /// Client registration finish (#3 registration function).
+    /// register_response: Server's produced response generated in the server.register_start (#2) function.
+    /// client_state: Client's produced state generated in the client.register_start (#1) function.
+    ///
+    /// Return RegisterFinish to be sent to the server and ExportKey that can be used for application specific usage.
     pub fn register_finish(&self, register_response: RegisterResponse, client_state: ClientState) -> (RegisterFinish, ExportKey) {
         // Generate asymmetric key
         let (priv_a, pub_a) = group::generate_keys();
@@ -103,7 +116,10 @@ impl Client {
 
 // Client login
 impl Client {
-    /// Return AuthRequest (uid and oprf_client_blind_result) and oprf_client_state
+    /// Client authentication start (#1 authentication function).
+    /// password: User's password.
+    ///
+    /// Return AuthRequest to be sent to the server and ClientState to be kept client-side.
     pub fn auth_start(&self, password: &[u8]) -> (AuthRequest, ClientState) { // TODO similar to client_register_start
         // Compute OPRF initialization
         let (client_state, client_blind_result) = oprf::client_init(self.parameters.use_oprf, password);
@@ -115,7 +131,11 @@ impl Client {
         }, client_state)
     }
 
-    /// Return AuthVerifyRequest (t1 and X) and PreKey (k1)
+    /// Client authentication key exchange (#3 authentication function).
+    /// auth_response: Server's produced response generated in the server.auth_start (#2) function.
+    /// client_state: Client's produced state generated in the client.auth_start (#1) function.
+    ///
+    /// Return AuthVerifyRequest to be sent to the server, KeyExchangeOutput to be kept client-side and ExportKey that can be used for application specific usage.
     pub fn auth_ke(&self, auth_response: AuthResponse, client_state: ClientState) -> (AuthVerifyRequest, KeyExchangeOutput, ExportKey) {
         // Generate asymmetric key
         let (priv_x, pub_x) = group::generate_keys();
@@ -146,7 +166,11 @@ impl Client {
         }, ke_output, export_key)
     }
 
-    /// Return OutputKey (K1)
+    /// Client authentication finish (#5 authentication function).
+    /// auth_verify_response: Server's produced response generated in the server.auth_finish (#4) function.
+    /// ke_output: Client's produced key exchange output generated in the client.auth_ke (#3) function.
+    ///
+    /// Return OutputKey if the tag verification is successful
     pub fn auth_finish(&self, auth_verify_response: AuthVerifyResponse, ke_output: KeyExchangeOutput) -> Option<OutputKey> {
         // Verify tag t2 and compute output key
         match auth_verify_response.server_verify_tag == Some(ke_output.server_verify_tag) { // TODO ok if none ?
@@ -158,7 +182,10 @@ impl Client {
 
 // Server register
 impl Server {
-    /// Return RegisterResponse (B and oprf_server_evaluate_result), b and secret_salt
+    /// Server registration start (#2 registration function).
+    /// register_request: Client's produced request generated in the client.register_start (#1) function.
+    ///
+    /// Return RegisterResponse to be sent to the client and PreRegisterSecrets to be kept server-side.
     pub fn register_start(&self, register_request: RegisterRequest) -> (RegisterResponse, PreRegisterSecrets) {
         // Generate asymmetric key
         let (priv_b, pub_b) = group::generate_keys();
@@ -180,6 +207,11 @@ impl Server {
          })
     }
 
+    /// Server registration finish (#4 registration function).
+    /// register_finish: Client's produced request generated in the client.register_finish (#3) function.
+    /// pre_register_secrets: Server's produced secrets generated in the server.register_start (#2) function.
+    ///
+    /// Return FileEntry to be stored on the server datastore.
     pub fn register_finish(&self, register_finish: RegisterFinish, pre_register_secrets: PreRegisterSecrets) -> FileEntry {
         // Store (e, b, A, salt)
         FileEntry {
@@ -193,7 +225,11 @@ impl Server {
 
 // Server login
 impl Server {
-    /// Return AuthResponse (e, Y, oprf_server_evalute_result) and EphemeralKeys (server Y and y)
+    /// Server authentication start (#2 authentication function).
+    /// auth_request: Client's produced request generated in the client.auth_start (#1) function.
+    /// file_entry: Server's stored user data generated in the server.register_finish (#4 registration) function..
+    ///
+    /// Return AuthResponse to be sent to the client and EphemeralKeys to be kept server-side.
     pub fn auth_start(&self, auth_request: AuthRequest, file_entry: &FileEntry) -> (AuthResponse, EphemeralKeys) {
         // Generate asymmetric key
         let (priv_y, pub_y) = group::generate_keys();
@@ -217,7 +253,12 @@ impl Server {
          })
     }
 
-    /// Return AuthVerifyResponse (t2) and OutputKey (K2)
+    /// Server authentication finish (#4 authentication function).
+    /// auth_verify_request: Client's produced request generated in the client.auth_ke (#3) function.
+    /// ephemeral_keys: Server's stored ephemeral secrets generated in the server.auth_start (#2) function..
+    /// file_entry: Server's stored user data generated in the server.register_finish (#4 registration) function..
+    ///
+    /// Return AuthVerifyResponse to be sent to the client and OutputKey if the tag verification is successful
     pub fn auth_finish(&self, auth_verify_request: AuthVerifyRequest, ephemeral_keys: EphemeralKeys, file_entry: &FileEntry) -> (AuthVerifyResponse, Option<OutputKey>) {
         // Retrieve (b, A) from file
         let priv_b = file_entry.priv_b.clone();
@@ -244,9 +285,6 @@ impl Server {
 
 
 
-//////////////////////////////////////////////
-//                   TEST                   //
-//////////////////////////////////////////////
 
 #[cfg(test)]
 mod tests {

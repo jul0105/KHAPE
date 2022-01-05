@@ -1,9 +1,13 @@
+//! Provide group operation functions on elliptic curve
+
 use curve25519_dalek::constants::X25519_BASEPOINT;
 use curve25519_dalek::montgomery::{elligator_decode, elligator_encode};
 use curve25519_dalek::scalar::Scalar;
 use rand::{Rng, thread_rng};
 
 use crate::alias::{PrivateKey, PublicKey, RawPublicKey, SharedKey, KEY_SIZE};
+
+const SIGN: u8 = 0; // TODO elligator sign
 
 #[cfg(feature = "bench")]
 pub fn compute_shared_key_pub(own_private_key: PrivateKey, opposing_public_key: PublicKey) -> SharedKey {
@@ -15,12 +19,12 @@ pub fn generate_keys_pub() -> (PrivateKey, PublicKey) {
     generate_keys()
 }
 
-const SIGN: u8 = 0; // TODO elligator sign
 
 fn compute_public_key(private_key: PrivateKey) -> RawPublicKey {
     X25519_BASEPOINT * private_key
 }
 
+/// Compute the exponentiation to return the DH shared key
 pub(crate) fn compute_shared_key(own_private_key: PrivateKey, opposing_public_key: PublicKey) -> SharedKey {
     own_private_key * encode_public_key(&opposing_public_key)
 }
@@ -36,6 +40,7 @@ fn generate_private_key() -> PrivateKey {
     }
 }
 
+/// Randomly generates a new key pair and decode the public key using the Elligator2 map.
 pub(crate) fn generate_keys() -> (PrivateKey, PublicKey) {
     loop {
         let private_key = generate_private_key();

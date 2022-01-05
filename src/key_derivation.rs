@@ -1,3 +1,5 @@
+//! Regroup key derivation functions required in the protocol
+
 use std::convert::TryFrom;
 
 use hkdf::Hkdf;
@@ -35,11 +37,12 @@ fn compute_hkdf(hkdf: &HkdfSha256, label: &[u8], context: &[u8]) -> Vec<u8> {
     hkdf_label.extend_from_slice(label);
     hkdf_label.extend_from_slice(context);
 
-    hkdf.expand(&hkdf_label, &mut okm);
+    hkdf.expand(&hkdf_label, &mut okm).unwrap();
     okm
 }
 
-// Follow OPAQUE-ke
+/// Derive multiple keys from the 3DH key exchange output. The output key of the protocol and both verification tag.
+/// This design is inspired by the OPAQUE's standard draft and OPAQUE-ke library
 pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> KeyExchangeOutput {
     let hkdf = HkdfSha256::new(None, &secret);
     let output_key = compute_hkdf(&hkdf, STR_SESSION_KEY, context);
@@ -56,7 +59,8 @@ pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> KeyEx
     }
 }
 
-// Follow OPAQUE-ke
+/// Derive multiple keys from the hardened OPRF output. The envelope encryption key and the export key.
+/// This design is inspired by the OPAQUE's standard draft and OPAQUE-ke library
 pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8>) -> ([u8; KEY_SIZE], [u8; KEY_SIZE]) {
     let mut encryption_key = vec![0u8; KEY_SIZE];
     let mut export_key = vec![0u8; KEY_SIZE];
@@ -66,8 +70,8 @@ pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8
         &[oprf_output, hardened_output].concat()
     );
 
-    hkdf.expand(STR_ENCRYPTION_KEY, &mut encryption_key);
-    hkdf.expand(STR_EXPORT_KEY, &mut export_key);
+    hkdf.expand(STR_ENCRYPTION_KEY, &mut encryption_key).unwrap();
+    hkdf.expand(STR_EXPORT_KEY, &mut export_key).unwrap();
 
     (
         <[u8; KEY_SIZE]>::try_from(encryption_key).unwrap(),

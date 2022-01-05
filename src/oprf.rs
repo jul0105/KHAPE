@@ -2,7 +2,7 @@ use rand::{Rng, thread_rng};
 use rand::rngs::OsRng;
 use voprf::{BlindedElement, EvaluationElement, NonVerifiableClient, NonVerifiableServer};
 
-use crate::alias::{Group, Hash, OPRF_SALT_SIZE};
+use crate::alias::{OprfGroup, Hash, OPRF_SALT_SIZE};
 use crate::alias::OprfClientState;
 
 #[derive(Clone)]
@@ -27,7 +27,7 @@ pub(crate) fn client_init(use_oprf: bool, password: &[u8]) -> (ClientState, Opti
 
     let mut client_rng = OsRng;
 
-    let result = NonVerifiableClient::<Group, Hash>::blind(
+    let result = NonVerifiableClient::<OprfGroup, Hash>::blind(
         password.to_vec(),
         &mut client_rng,
     ).expect("Unable to construct client");
@@ -44,11 +44,11 @@ pub(crate) fn server_evaluate(use_oprf: bool, client_blind_result: Option<Vec<u8
         // TODO handle error
     }
 
-    let server = NonVerifiableServer::<Group, Hash>::new_with_key(&secret_salt.unwrap())
+    let server = NonVerifiableServer::<OprfGroup, Hash>::new_with_key(&secret_salt.unwrap())
         .expect("Unable to construct server");
 
     Some(server.evaluate(
-        BlindedElement::<Group, Hash>::deserialize(&client_blind_result.unwrap()).unwrap(), // TODO unwrap
+        BlindedElement::<OprfGroup, Hash>::deserialize(&client_blind_result.unwrap()).unwrap(), // TODO unwrap
         None,
     ).expect("Unable to perform server evaluate").message.serialize())
 }
@@ -58,7 +58,7 @@ pub(crate) fn client_finish(use_oprf: bool, client_state: ClientState, server_ev
         ClientState::WithoutOPRF(pw) => pw,
         ClientState::WithOPRF(oprf_client_state) => match use_oprf && server_evaluate_result.is_some() {
             true => oprf_client_state.finalize(
-                    EvaluationElement::<Group, Hash>::deserialize(&server_evaluate_result.unwrap()).unwrap(), // TODO unwrap
+                EvaluationElement::<OprfGroup, Hash>::deserialize(&server_evaluate_result.unwrap()).unwrap(), // TODO unwrap
                     None,
                 ).expect("Unable to perform client finalization").to_vec(),
             false => panic!("TO HANDLE"), // TODO handle error
