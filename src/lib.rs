@@ -2,6 +2,7 @@
 //!
 //! ## Parameters
 //! Client and server has to agree on the protocol parameters. Default parameters include OPRF and a memory-hard hash computation.
+//! It is possible to provide the argon2 parameters to use.
 //! ```
 //! use khape::Parameters;
 //! let params = Parameters::default();
@@ -194,6 +195,8 @@ pub use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerif
 pub use crate::message::{EphemeralKeys, FileEntry, PreRegisterSecrets};
 // Alias
 pub use crate::alias::{OutputKey, ExportKey};
+// Slow hash parameters
+pub use crate::slow_hash::SlowHashParams;
 
 #[cfg(feature = "bench")]
 pub use crate::ideal_cipher::{encrypt_feistel_pub, decrypt_feistel_pub};

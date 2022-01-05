@@ -6,16 +6,17 @@ use crate::encryption::Envelope;
 use crate::message::{AuthRequest, AuthResponse, AuthVerifyRequest, AuthVerifyResponse, EphemeralKeys, FileEntry, PreRegisterSecrets, RegisterFinish, RegisterRequest, RegisterResponse};
 use crate::oprf::ClientState;
 use crate::key_derivation::KeyExchangeOutput;
+use crate::slow_hash::SlowHashParams;
 
 /// Parameters of the KHAPE protocol
 #[derive(Clone, Copy)]
 pub struct Parameters {
     pub use_oprf: bool,
-    pub use_slow_hash: bool,
+    pub use_slow_hash: Option<SlowHashParams>,
 }
 
 impl Parameters {
-    pub fn new(use_oprf: bool, use_slow_hash: bool) -> Self {
+    pub fn new(use_oprf: bool, use_slow_hash: Option<SlowHashParams>) -> Self {
         Parameters {
             use_oprf,
             use_slow_hash
@@ -25,7 +26,10 @@ impl Parameters {
     pub fn default() -> Self {
         Parameters {
             use_oprf: DEFAULT_PARAM_USE_OPRF,
-            use_slow_hash: DEFAULT_PARAM_USE_SLOW_HASH
+            use_slow_hash: match DEFAULT_PARAM_USE_SLOW_HASH {
+                true => Some(SlowHashParams::default()),
+                false => None
+            }
         }
     }
 }
@@ -91,8 +95,8 @@ impl Client {
 
         // Compute slow hash
         let hardened_output = match self.parameters.use_slow_hash {
-            true => slow_hash::hash(&oprf_output),
-            false => oprf_output.clone(),
+            Some(params) => slow_hash::hash(&oprf_output, params),
+            None => oprf_output.clone(),
         };
 
         // Compute encryption key
@@ -145,8 +149,8 @@ impl Client {
 
         // Compute slow hash
         let hardened_output = match self.parameters.use_slow_hash {
-            true => slow_hash::hash(&oprf_output),
-            false => oprf_output.clone(),
+            Some(params) => slow_hash::hash(&oprf_output, params),
+            None => oprf_output.clone(),
         };
 
         // Compute encryption key
@@ -297,7 +301,7 @@ mod tests {
 
         let param = Parameters {
             use_oprf: true,
-            use_slow_hash: false
+            use_slow_hash: None
         };
         let client = Client::new(param, String::from(uid));
         let server = Server::new(param);
@@ -350,7 +354,7 @@ mod tests {
     fn test_auth_same_password() {
         let param = Parameters {
             use_oprf: true,
-            use_slow_hash: false
+            use_slow_hash: None
         };
         let uid = "1234";
         let password = b"test";
@@ -366,7 +370,7 @@ mod tests {
     fn test_auth_different_password() {
         let param = Parameters {
             use_oprf: true,
-            use_slow_hash: false
+            use_slow_hash: None
         };
         let uid = "1234";
         let password_register = b"test";

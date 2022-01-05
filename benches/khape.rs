@@ -6,7 +6,7 @@ use std::convert::TryFrom;
 use ctr::cipher::{NewCipher, StreamCipher};
 
 const USE_OPRF: bool = true;
-const USE_SLOW_HASH: bool = false;
+const USE_SLOW_HASH: Option<SlowHashParams> = None;
 
 pub fn client_initialization(c: &mut Criterion) {
     let uid = "username";

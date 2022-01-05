@@ -27,6 +27,6 @@ pub const DEFAULT_PARAM_USE_OPRF: bool = true;
 pub const DEFAULT_PARAM_USE_SLOW_HASH: bool = true;
 
 // Argon2 parameters
-pub const ARGON2_M_COST: u32 = 16*1024;
-pub const ARGON2_T_COST: u32 = 3;
-pub const ARGON2_P_COST: u32 = 4;
+pub const DEFAULT_ARGON2_M_COST: u32 = 16*1024;
+pub const DEFAULT_ARGON2_T_COST: u32 = 3;
+pub const DEFAULT_ARGON2_P_COST: u32 = 4;
