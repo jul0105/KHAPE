@@ -57,7 +57,7 @@ pub(crate) fn compute_output_key_and_tag(secret: &[u8], context: &[u8]) -> KeyEx
 }
 
 // Follow OPAQUE-ke
-pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8>) -> (Vec<u8>, Vec<u8>) {
+pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8>) -> ([u8; KEY_SIZE], [u8; KEY_SIZE]) {
     let mut encryption_key = vec![0u8; KEY_SIZE];
     let mut export_key = vec![0u8; KEY_SIZE];
 
@@ -68,7 +68,11 @@ pub(crate) fn compute_envelope_key(oprf_output: Vec<u8>, hardened_output: Vec<u8
 
     hkdf.expand(STR_ENCRYPTION_KEY, &mut encryption_key);
     hkdf.expand(STR_EXPORT_KEY, &mut export_key);
-    (encryption_key, export_key)
+
+    (
+        <[u8; KEY_SIZE]>::try_from(encryption_key).unwrap(),
+        <[u8; KEY_SIZE]>::try_from(export_key).unwrap()
+    )
 }
 
 
