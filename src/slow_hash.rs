@@ -13,7 +13,7 @@ pub(crate) fn hash(input: &[u8]) -> Vec<u8> {
     );
 
     let salt = SaltString::b64_encode(&[0u8; argon2::MIN_SALT_LEN]).unwrap();
-    argon2.hash_password(input, &salt).unwrap().to_string().into_bytes() // TODO handle unwrap
+    argon2.hash_password(input, &salt).unwrap().to_string().into_bytes()
 }
 
 #[cfg(test)]

@@ -120,7 +120,7 @@ impl Client {
     /// password: User's password.
     ///
     /// Return AuthRequest to be sent to the server and ClientState to be kept client-side.
-    pub fn auth_start(&self, password: &[u8]) -> (AuthRequest, ClientState) { // TODO similar to client_register_start
+    pub fn auth_start(&self, password: &[u8]) -> (AuthRequest, ClientState) {
         // Compute OPRF initialization
         let (client_state, client_blind_result) = oprf::client_init(self.parameters.use_oprf, password);
 
@@ -173,7 +173,7 @@ impl Client {
     /// Return OutputKey if the tag verification is successful
     pub fn auth_finish(&self, auth_verify_response: AuthVerifyResponse, ke_output: KeyExchangeOutput) -> Option<OutputKey> {
         // Verify tag t2 and compute output key
-        match auth_verify_response.server_verify_tag == Some(ke_output.server_verify_tag) { // TODO ok if none ?
+        match auth_verify_response.server_verify_tag == Some(ke_output.server_verify_tag) {
             true => Some(ke_output.output_key),
             false => None,
         }
@@ -196,7 +196,7 @@ impl Server {
         // Compute OPRF server evaluate
         let server_evaluate_result = oprf::server_evaluate(self.parameters.use_oprf, register_request.oprf_client_blind_result, secret_salt);
 
-        // Return B and h2 % TODO how to store salt and b (secret) ? Pre - store b and salt in file[uid] (remove it on server_register_finish) OR use a session_file[sid] < - (b, salt)
+        // Return B and h2
         (RegisterResponse {
             pub_b,
             oprf_server_evalute_result: server_evaluate_result,
@@ -241,7 +241,7 @@ impl Server {
         // Compute OPRF server evaluate
         let server_evaluate_result = oprf::server_evaluate(self.parameters.use_oprf, auth_request.oprf_client_blind_result, secret_salt);
 
-        // Return e, Y, y, h2 % TODO how to store y ? Store in file[uid] (remove it on server_auth_finish) OR use a session_file[sid] <- (y)
+        // Return e, Y, y, h2
         (AuthResponse {
             encrypted_envelope,
             pub_y,
@@ -276,7 +276,7 @@ impl Server {
             false => (None, None),
         };
 
-        // Return K2, t2 % TODO what to do with K2 (session key) ? Store in db ? Expiration ? use a session_file[sid] <- K
+        // Return K2, t2
         (AuthVerifyResponse {
             server_verify_tag,
         }, server_output_key)

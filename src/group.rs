@@ -7,7 +7,7 @@ use rand::{Rng, thread_rng};
 
 use crate::alias::{PrivateKey, PublicKey, RawPublicKey, SharedKey, KEY_SIZE};
 
-const SIGN: u8 = 0; // TODO elligator sign
+const ELLIGATOR_SIGN: u8 = 0;
 
 #[cfg(feature = "bench")]
 pub fn compute_shared_key_pub(own_private_key: PrivateKey, opposing_public_key: PublicKey) -> SharedKey {
@@ -53,7 +53,7 @@ pub(crate) fn generate_keys() -> (PrivateKey, PublicKey) {
 }
 
 fn decode_public_key(point: &RawPublicKey) -> Option<PublicKey> {
-    elligator_decode(point, SIGN.into())
+    elligator_decode(point, ELLIGATOR_SIGN.into())
 }
 fn encode_public_key(field_element: &PublicKey) -> RawPublicKey {
     elligator_encode(field_element)

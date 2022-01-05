@@ -39,16 +39,16 @@ pub(crate) fn server_evaluate(use_oprf: bool, client_blind_result: Option<Vec<u8
     if !use_oprf {
         return None;
     }
-
+    
     if client_blind_result.is_none() || secret_salt.is_none() {
-        // TODO handle error
+        return None; // Should produce an error
     }
 
     let server = NonVerifiableServer::<OprfGroup, Hash>::new_with_key(&secret_salt.unwrap())
         .expect("Unable to construct server");
 
     Some(server.evaluate(
-        BlindedElement::<OprfGroup, Hash>::deserialize(&client_blind_result.unwrap()).unwrap(), // TODO unwrap
+        BlindedElement::<OprfGroup, Hash>::deserialize(&client_blind_result.unwrap()).unwrap(),
         None,
     ).expect("Unable to perform server evaluate").message.serialize())
 }
@@ -58,10 +58,10 @@ pub(crate) fn client_finish(use_oprf: bool, client_state: ClientState, server_ev
         ClientState::WithoutOPRF(pw) => pw,
         ClientState::WithOPRF(oprf_client_state) => match use_oprf && server_evaluate_result.is_some() {
             true => oprf_client_state.finalize(
-                EvaluationElement::<OprfGroup, Hash>::deserialize(&server_evaluate_result.unwrap()).unwrap(), // TODO unwrap
+                EvaluationElement::<OprfGroup, Hash>::deserialize(&server_evaluate_result.unwrap()).unwrap(),
                     None,
                 ).expect("Unable to perform client finalization").to_vec(),
-            false => panic!("TO HANDLE"), // TODO handle error
+            false => pw, // Should produce an error
         }
     }
 }

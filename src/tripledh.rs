@@ -31,7 +31,7 @@ pub(crate) fn compute_client(pub_b: PublicKey, pub_y: PublicKey, priv_a: Private
         compute_shared_key(priv_x, pub_y).to_bytes()
     ].concat();
 
-    key_derivation::compute_output_key_and_tag(&o_client, b"") // TODO add context
+    key_derivation::compute_output_key_and_tag(&o_client, b"")
 }
 
 /// Compute 3DH result for the server
@@ -50,7 +50,7 @@ pub(crate) fn compute_server(pub_a: PublicKey, pub_x: PublicKey, priv_b: Private
         compute_shared_key(priv_y, pub_x).to_bytes()
     ].concat();
 
-    key_derivation::compute_output_key_and_tag(&o_server, b"") // TODO add context
+    key_derivation::compute_output_key_and_tag(&o_server, b"")
 }
 
 
