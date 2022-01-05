@@ -50,3 +50,10 @@ Documentation is available by executing the following command :
 cargo doc --no-deps --open
 ```
 
+## Benchmark
+
+Benchmarks can be computed with the following command : 
+
+```
+cargo bench --features "bench"
+```
